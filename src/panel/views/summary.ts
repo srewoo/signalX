@@ -56,12 +56,36 @@ function tabs(s: Session): HTMLElement {
   return el('div', { class: 'sum-tabs', role: 'tablist' }, items);
 }
 
+/** Original-coverage list shown on the keyless summary screen. */
+function keylessSources(s: Session): HTMLElement {
+  const rows = s.cluster.articles.map((a) =>
+    el('button', { class: 'src-row', 'aria-label': `Open ${a.sourceName} article`, onClick: () => {
+      void send({ type: 'tabs/openSources', urls: [a.url] });
+    } }, [
+      el('div', { class: 's-body' }, [
+        el('div', { class: 's-name' }, [a.sourceName]),
+        el('div', { class: 's-title' }, [a.title]),
+      ]),
+      icon('external-link', 14),
+    ]),
+  );
+  return el('div', {}, [
+    el('div', { class: 'section-h' }, ['Read the original coverage']),
+    ...rows,
+    el('button', { class: 'act-btn', style: 'width:100%; margin-top:4px;', onClick: () => {
+      void send({ type: 'tabs/openSources', urls: s.cluster.articles.map((a) => a.url) });
+    } }, [`Open all ${s.cluster.articles.length} in background tabs`]),
+  ]);
+}
+
 async function start(s: Session): Promise<void> {
   if (!s.ctx.hasProvider) {
+    // Keyless mode must never be a dead end: show the original coverage so the
+    // story is still fully readable without an AI key.
     render(s.content, header(s), errorCard(
       { code: 'NO_KEY', message: 'Add an AI key in Settings to generate summaries. Headlines and search work without one.' },
       { onUpdateKey: () => navigate({ view: 'settings' }) },
-    ));
+    ), keylessSources(s));
     s.stopBtn.style.display = 'none';
     return;
   }

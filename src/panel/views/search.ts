@@ -49,13 +49,26 @@ export function renderSearch(root: HTMLElement, ctx: AppContext, initialQuery = 
     },
   });
 
-  const clearBtn = el('button', { class: 'search-clear', 'aria-label': 'Clear search', onClick: () => {
-    input.value = '';
-    bar.className = 'search-input';
-    input.focus();
-    seq.value += 1; // cancel any in-flight overview
-    showIdle(content);
-  } }, [icon('x', 16)]);
+  // X clears the query; if the query is already empty it acts as "back to feed"
+  // so the search screen is never a dead end. Escape mirrors the same behavior.
+  const dismiss = (): void => {
+    if (input.value) {
+      input.value = '';
+      bar.className = 'search-input';
+      input.focus();
+      seq.value += 1; // cancel any in-flight overview
+      showIdle(content);
+    } else {
+      navigate({ view: 'feed' });
+    }
+  };
+  const clearBtn = el('button', { class: 'search-clear', 'aria-label': 'Clear search or go back', onClick: dismiss }, [icon('x', 16)]);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      dismiss();
+    }
+  });
 
   const bar = el('div', { class: initialQuery ? 'search-input active' : 'search-input' }, [icon('search', 16), input, clearBtn]);
 
