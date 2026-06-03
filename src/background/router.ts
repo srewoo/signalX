@@ -4,6 +4,7 @@ import { getFeed, getTrending, search } from './feeds/index';
 import { readSummaryCache } from './llm/summaryCache';
 import { generateComparison, generateOverview } from './llm/generate';
 import { testKey } from './llm/client';
+import { listModels } from './llm/models';
 import { getClusterById } from './feeds/cache';
 import type { StoryCluster } from '../shared/contracts';
 import { getPrefs, getProvider, setPrefs, setProvider } from './storage/settings';
@@ -81,6 +82,8 @@ export async function route(req: Request): Promise<Result<unknown>> {
       return ok(undefined);
     case 'settings/testKey':
       return handleTestKey(req);
+    case 'settings/listModels':
+      return listModels(req.settings);
     case 'settings/getPrefs':
       return ok(await getPrefs());
     case 'settings/setPrefs':

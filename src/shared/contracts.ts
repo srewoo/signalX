@@ -126,6 +126,7 @@ export type Request =
   | { readonly type: 'settings/getProvider' }
   | { readonly type: 'settings/setProvider'; readonly settings: ProviderSettings }
   | { readonly type: 'settings/testKey'; readonly settings: ProviderSettings }
+  | { readonly type: 'settings/listModels'; readonly settings: ProviderSettings }
   | { readonly type: 'settings/getPrefs' }
   | { readonly type: 'settings/setPrefs'; readonly prefs: Preferences }
   | { readonly type: 'bookmarks/listFolders' }
@@ -148,6 +149,8 @@ export interface ResponseMap {
   'settings/getProvider': ProviderSettings | null;
   'settings/setProvider': void;
   'settings/testKey': { valid: boolean };
+  /** Live model list from the provider's /models API; 'fallback' = static catalog (API unreachable). */
+  'settings/listModels': { models: readonly { id: string; label: string }[]; source: 'live' | 'fallback' };
   'settings/getPrefs': Preferences;
   'settings/setPrefs': void;
   'bookmarks/listFolders': readonly Folder[];

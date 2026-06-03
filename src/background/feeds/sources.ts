@@ -2,8 +2,15 @@ import type { Category, CountryCode } from '../../shared/contracts';
 
 /**
  * Feed registry. Each source produces an RSS/Atom URL for a given country +
- * category. Reuters has no stable public RSS, so we fall back to a Google News
- * RSS query scoped to reuters.com — the same pattern covers any publisher.
+ * category. Some publishers expose stable per-category RSS paths (BBC, Times of
+ * India); for the rest we build a Google News RSS query scoped to BOTH the
+ * publisher domain AND a category search term so the result is genuinely
+ * category-specific.
+ *
+ * HARD RULE: a category feed must NEVER silently fall back to a source's
+ * top/home feed. If a source has no category-specific feed for the requested
+ * category, its `url()` returns null and the source is simply dropped for that
+ * combo. Wrong content is worse than fewer sources.
  */
 
 export interface FeedSource {
@@ -25,6 +32,11 @@ const GN_LANG: Record<CountryCode, { hl: string; gl: string; ceid: string }> = {
   GLOBAL: { hl: 'en-US', gl: 'US', ceid: 'US:en' },
 };
 
+/**
+ * Category search term injected into Google-News-scoped queries. `top` has no
+ * term — the only category that legitimately maps to a publisher's general
+ * feed. Every other category MUST carry a term so the query is specific.
+ */
 const CATEGORY_TERMS: Record<Category, string> = {
   top: '',
   tech: 'technology',
@@ -34,55 +46,90 @@ const CATEGORY_TERMS: Record<Category, string> = {
   world: 'world',
 };
 
-/** Build a Google News RSS URL, optionally scoped to a publisher domain. */
+/** Build the country-scoped (hl/gl/ceid) params shared by all Google News URLs. */
+function localeParams(country: CountryCode): URLSearchParams {
+  const loc = GN_LANG[country];
+  return new URLSearchParams({ hl: loc.hl, gl: loc.gl, ceid: loc.ceid });
+}
+
+/**
+ * Build a Google News RSS URL scoped to a publisher domain AND category term.
+ *
+ * - `top` + no domain → the country's general top feed (the ONE allowed
+ *   "home feed" case, used only by the dedicated top-feed source).
+ * - any other category → a `site:<domain> <term>` search, so the feed is both
+ *   publisher- and category-specific. Returns null if the category has no term
+ *   (only `top`), which keeps the never-fall-back-to-home invariant.
+ */
 function googleNews(
   country: CountryCode,
   category: Category,
   siteDomain?: string,
-): string {
-  const loc = GN_LANG[country];
+): string | null {
   const term = CATEGORY_TERMS[category];
-  const params = new URLSearchParams({ hl: loc.hl, gl: loc.gl, ceid: loc.ceid });
-  if (!siteDomain && category === 'top') {
-    return `${GOOGLE_NEWS}?${params.toString()}`;
+  if (category === 'top') {
+    if (siteDomain) {
+      // A publisher "top" via Google News: scope to the domain only.
+      const search = localeParams(country);
+      search.set('q', `site:${siteDomain}`);
+      return `${GOOGLE_NEWS}/search?${search.toString()}`;
+    }
+    return `${GOOGLE_NEWS}?${localeParams(country).toString()}`;
   }
-  const queryParts: string[] = [];
-  if (term) queryParts.push(term);
+  // Non-top category: a term is guaranteed by CATEGORY_TERMS.
+  const queryParts = [term];
   if (siteDomain) queryParts.push(`site:${siteDomain}`);
-  const search = new URLSearchParams({
-    q: queryParts.join(' ') || 'news',
-    hl: loc.hl,
-    gl: loc.gl,
-    ceid: loc.ceid,
-  });
+  const search = localeParams(country);
+  search.set('q', queryParts.join(' '));
   return `${GOOGLE_NEWS}/search?${search.toString()}`;
 }
 
 /** Build a Google News search RSS URL for an arbitrary user query. */
 export function googleNewsSearch(query: string, country: CountryCode): string {
-  const loc = GN_LANG[country];
-  const params = new URLSearchParams({
-    q: query,
-    hl: loc.hl,
-    gl: loc.gl,
-    ceid: loc.ceid,
-  });
+  const params = localeParams(country);
+  params.set('q', query);
   return `${GOOGLE_NEWS}/search?${params.toString()}`;
 }
 
+/**
+ * BBC native RSS paths. Sport lives under a different root (/sport/rss.xml),
+ * everything else under /news/<section>/rss.xml. `world` maps to the world
+ * section. Categories absent here (none currently) resolve to null, not top.
+ */
 const BBC_CATEGORY: Partial<Record<Category, string>> = {
   top: 'https://feeds.bbci.co.uk/news/rss.xml',
   tech: 'https://feeds.bbci.co.uk/news/technology/rss.xml',
   business: 'https://feeds.bbci.co.uk/news/business/rss.xml',
   politics: 'https://feeds.bbci.co.uk/news/politics/rss.xml',
   world: 'https://feeds.bbci.co.uk/news/world/rss.xml',
+  sports: 'https://feeds.bbci.co.uk/sport/rss.xml',
 };
+
+/**
+ * Times of India native RSS feed ids (timesofindia.indiatimes.com/rssfeeds/<id>.cms).
+ * Known-stable section ids only; categories without a stable id are omitted so
+ * TOI is dropped for them rather than serving its top feed.
+ */
+const TOI_FEED_IDS: Partial<Record<Category, string>> = {
+  top: '1221656',        // Top Stories
+  tech: '66949542',      // Technology / Gadgets
+  business: '1898055',   // Business
+  sports: '4719148',     // Sports
+  world: '296589292',    // World
+  // politics: omitted — no stable standalone TOI politics feed id.
+};
+
+function toiUrl(category: Category): string | null {
+  const id = TOI_FEED_IDS[category];
+  return id ? `https://timesofindia.indiatimes.com/rssfeeds/${id}.cms` : null;
+}
 
 export const SOURCES: readonly FeedSource[] = [
   {
     sourceId: 'bbc',
     sourceName: 'BBC',
-    url: (_country, category) => BBC_CATEGORY[category] ?? BBC_CATEGORY.top ?? null,
+    // No fallback to top: unknown category → null (source dropped for that combo).
+    url: (_country, category) => BBC_CATEGORY[category] ?? null,
   },
   {
     sourceId: 'cnn',
@@ -97,11 +144,13 @@ export const SOURCES: readonly FeedSource[] = [
   {
     sourceId: 'toi',
     sourceName: 'Times of India',
-    url: (country, category) => googleNews(country, category, 'timesofindia.indiatimes.com'),
+    // Native TOI RSS where a stable section id exists; null otherwise.
+    url: (_country, category) => toiUrl(category),
   },
   {
     sourceId: 'ht',
     sourceName: 'Hindustan Times',
+    // No reliably-stable per-category RSS paths → Google News scoped by site + term.
     url: (country, category) => googleNews(country, category, 'hindustantimes.com'),
   },
   {

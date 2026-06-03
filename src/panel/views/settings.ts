@@ -4,22 +4,26 @@
  * default summary length, dark-mode toggle (auto/light/dark), security note.
  */
 
-import { el, render } from '../lib/dom';
+import { el, render, setText } from '../lib/dom';
 import { icon } from '../lib/icons';
 import { backbar } from '../components/chrome';
 import { errorCard } from '../components/errorCard';
 import { pageFooter } from '../components/footer';
-import { COUNTRIES, SUMMARY_LENGTHS, PROVIDERS, MODELS, defaultModel } from '../lib/catalog';
+import { COUNTRIES, SUMMARY_LENGTHS, PROVIDERS, MODELS, defaultModel, provider as providerInfo } from '../lib/catalog';
 import { applyTheme } from '../lib/theme';
 import { send } from '../lib/messaging';
 import { navigate, type AppContext } from '../router';
 import type { Preferences, ProviderId, ProviderSettings, SummaryType, CountryCode } from '../../shared/contracts';
+
+type ModelOption = { readonly id: string; readonly label: string };
 
 interface Draft {
   provider: ProviderId;
   apiKey: string;
   model: string;
   keyState: 'unknown' | 'testing' | 'valid' | 'invalid';
+  /** Monotonic token to discard stale listModels responses across provider switches. */
+  modelSeq: number;
 }
 
 export function renderSettings(root: HTMLElement, ctx: AppContext): void {
@@ -41,9 +45,11 @@ async function load(content: HTMLElement, ctx: AppContext): Promise<void> {
   }
   const existing = provRes.ok ? provRes.value : null;
   const draft: Draft = existing
-    ? { provider: existing.provider, apiKey: existing.apiKey, model: existing.model, keyState: 'valid' }
-    : { provider: 'anthropic', apiKey: '', model: defaultModel('anthropic'), keyState: 'unknown' };
+    ? { provider: existing.provider, apiKey: existing.apiKey, model: existing.model, keyState: 'valid', modelSeq: 0 }
+    : { provider: 'anthropic', apiKey: '', model: defaultModel('anthropic'), keyState: 'unknown', modelSeq: 0 };
   draw(content, ctx, prefsRes.value, draft);
+  // Trigger point (b): a verified provider config exists on load → fetch live models.
+  if (existing && draft.apiKey.length > 0) void refreshModels(draft);
 }
 
 function draw(content: HTMLElement, ctx: AppContext, prefs: Preferences, draft: Draft): void {
@@ -71,7 +77,11 @@ function providerGrid(content: HTMLElement, ctx: AppContext, prefs: Preferences,
         draft.provider = p.id;
         draft.model = defaultModel(p.id);
         draft.keyState = 'unknown';
+        // Invalidate any in-flight model fetch for the previous provider.
+        draft.modelSeq += 1;
         draw(content, ctx, prefs, draft);
+        // Trigger point (c): provider changed and a key is present (1h-cached upstream).
+        if (draft.apiKey.length > 0) void refreshModels(draft);
       },
     }, [p.name]),
   );
@@ -119,30 +129,119 @@ async function runTest(content: HTMLElement, ctx: AppContext, prefs: Preferences
     draft.keyState = 'valid';
     await send({ type: 'settings/setProvider', settings });
     ctx.hasProvider = true;
-  } else {
-    draft.keyState = 'invalid';
+    draw(content, ctx, prefs, draft);
+    // Trigger point (a): key just verified → populate the live model list.
+    void refreshModels(draft);
+    return;
   }
+  draft.keyState = 'invalid';
   draw(content, ctx, prefs, draft);
 }
 
+/** Live handles to the current model field; refreshModels() targets these. */
+interface ModelFieldHandle {
+  readonly select: HTMLSelectElement;
+  readonly hint: HTMLElement;
+  readonly draft: Draft;
+}
+let activeModelField: ModelFieldHandle | null = null;
+
+/** Build an <option> with its value set as a DOM property (dom.el skips option value). */
+function modelOption(opt: ModelOption): HTMLOptionElement {
+  const node = el('option', {}, [opt.label]);
+  node.value = opt.id;
+  return node;
+}
+
+/**
+ * Replace the select's options with `list`, preserving the current selection if
+ * still present (else the first). A stored model absent from `list` is injected
+ * at the top, labelled "<id> (saved)", so the saved choice never disappears.
+ * Returns the model id now selected.
+ */
+function fillSelect(select: HTMLSelectElement, list: readonly ModelOption[], current: string): string {
+  const present = list.some((m) => m.id === current);
+  const opts: ModelOption[] = [];
+  if (!present && current.length > 0) opts.push({ id: current, label: `${current} (saved)` });
+  for (const m of list) opts.push(m);
+  render(select, ...opts.map(modelOption));
+  const selected = present || current.length === 0 ? current || (list[0]?.id ?? '') : current;
+  select.value = selected;
+  return select.value;
+}
+
 function modelField(draft: Draft): HTMLElement {
-  const options = MODELS[draft.provider].map((m) =>
-    el('option', { value: m.id }, [m.label]),
-  );
-  const select = el('select', { class: 'select', 'aria-label': 'Model' }, options);
-  select.value = draft.model;
+  const select = el('select', { class: 'select', 'aria-label': 'Model' }, []);
+  fillSelect(select, MODELS[draft.provider], draft.model);
   select.addEventListener('change', () => {
     draft.model = select.value;
-    // Auto-save: if the key is already verified, persist the model change
-    // immediately — switching model must not require re-testing the key.
-    if (draft.keyState === 'valid') {
-      void send({
-        type: 'settings/setProvider',
-        settings: { provider: draft.provider, apiKey: draft.apiKey, model: draft.model },
-      });
-    }
+    persistIfVerified(draft);
   });
-  return el('div', { class: 'field' }, [el('label', {}, ['Model']), select]);
+
+  const hint = el('div', { class: 'hint', style: 'margin-top:6px;' }, []);
+
+  const refresh = el('button', {
+    class: 'fb-btn',
+    'aria-label': 'Refresh model list',
+    title: 'Refresh model list',
+    onClick: () => void refreshModels(draft),
+  }, [icon('refresh-cw', 14)]);
+
+  const labelRow = el('div', { style: 'display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;' }, [
+    el('label', { style: 'margin:0;' }, ['Model']),
+    refresh,
+  ]);
+
+  activeModelField = { select, hint, draft };
+  return el('div', { class: 'field' }, [labelRow, select, hint]);
+}
+
+/** Auto-save: persist a model change immediately when the key is verified. */
+function persistIfVerified(draft: Draft): void {
+  if (draft.keyState !== 'valid') return;
+  void send({
+    type: 'settings/setProvider',
+    settings: { provider: draft.provider, apiKey: draft.apiKey, model: draft.model },
+  });
+}
+
+/**
+ * Fetch the live model list and reconcile the active select. Guards against
+ * stale responses: a sequence token captured at call time is compared against
+ * the draft's current token (bumped on provider switch) when the response lands.
+ */
+async function refreshModels(draft: Draft): Promise<void> {
+  const handle = activeModelField;
+  if (!handle || handle.draft !== draft || draft.apiKey.length === 0) return;
+
+  const seq = (draft.modelSeq += 1);
+  setText(handle.hint, 'Loading available models…');
+
+  const res = await send({
+    type: 'settings/listModels',
+    settings: { provider: draft.provider, apiKey: draft.apiKey, model: draft.model },
+  });
+
+  // Discard if the user switched provider (seq bumped) or the field was redrawn.
+  if (draft.modelSeq !== seq || activeModelField !== handle) return;
+
+  const providerName = providerInfo(draft.provider).name;
+  if (res.ok && res.value.source === 'live') {
+    const before = draft.model;
+    const now = fillSelect(handle.select, res.value.models, draft.model);
+    setText(handle.hint, `${res.value.models.length} models available from ${providerName}`);
+    // Auto-correct: the stored model vanished from the live list — persist the
+    // new selection so the saved config stays consistent with what's shown.
+    if (now !== before) {
+      draft.model = now;
+      persistIfVerified(draft);
+    }
+    return;
+  }
+
+  // Fallback (or transport error): restore the static catalog defaults.
+  fillSelect(handle.select, MODELS[draft.provider], draft.model);
+  setText(handle.hint, 'Couldn’t fetch live model list — showing defaults.');
 }
 
 function countryField(prefs: Preferences, ctx: AppContext): HTMLElement {

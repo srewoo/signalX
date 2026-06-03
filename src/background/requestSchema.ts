@@ -76,6 +76,7 @@ export const requestSchema: z.ZodType<Request> = z.discriminatedUnion('type', [
   z.object({ type: z.literal('settings/getProvider') }),
   z.object({ type: z.literal('settings/setProvider'), settings: providerSettings }),
   z.object({ type: z.literal('settings/testKey'), settings: providerSettings }),
+  z.object({ type: z.literal('settings/listModels'), settings: providerSettings }),
   z.object({ type: z.literal('settings/getPrefs') }),
   z.object({ type: z.literal('settings/setPrefs'), prefs: preferences }),
   z.object({ type: z.literal('bookmarks/listFolders') }),
