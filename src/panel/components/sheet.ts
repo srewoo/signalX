@@ -5,6 +5,7 @@
  */
 
 import { el } from '../lib/dom';
+import { icon, type IconName } from '../lib/icons';
 
 export interface SheetHandle {
   readonly close: () => void;
@@ -56,9 +57,11 @@ export function optRow(
   label: string,
   selected: boolean,
   onClick: () => void,
+  leadingIcon?: IconName,
 ): HTMLButtonElement {
   return el('button', { class: selected ? 'opt-row sel' : 'opt-row', 'aria-selected': selected, onClick }, [
-    label,
-    selected ? el('span', { class: 'check' }, ['✓']) : null,
+    leadingIcon ? icon(leadingIcon, 16) : null,
+    el('span', { class: 'opt-label' }, [label]),
+    selected ? el('span', { class: 'check' }, [icon('check', 16)]) : null,
   ]);
 }

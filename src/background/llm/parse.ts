@@ -27,6 +27,42 @@ function stripFences(text: string): string {
   return text.replace(/```(?:json)?/gi, '').trim();
 }
 
+const JSON_KEY_HINT = /"(?:keyEvents|whatHappened|whatHappensNext|importantQuotes|keyFacts|commonFacts|perspectives|coverageDifferences)"/;
+
+/** Heuristic: does this look like JSON scaffolding rather than plain prose? */
+function looksLikeJson(text: string): boolean {
+  const t = stripFences(text);
+  return t.startsWith('{') || t.startsWith('[') || JSON_KEY_HINT.test(t);
+}
+
+/**
+ * Salvage human-readable prose from text we failed to parse as JSON. Strips
+ * fences/tags, removes JSON punctuation and quoted key names, and returns the
+ * first few sentences. Never returns raw `{`/`"key":` scaffolding to the user.
+ */
+function salvageProse(text: string): string {
+  const cleaned = stripFences(text)
+    .replace(/"[a-zA-Z]+"\s*:/g, ' ') // "key": pairs
+    .replace(/[{}[\]"]/g, ' ') // structural punctuation
+    .replace(/\s*[,:]\s*/g, ' ') // stray separators
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return '';
+  // Bound to roughly the first 2–3 sentences so we don't dump a wall of text.
+  const sentences = cleaned.match(/[^.!?]+[.!?]+/g);
+  if (sentences && sentences.length > 0) return sentences.slice(0, 3).join(' ').trim();
+  return cleaned.slice(0, 400).trim();
+}
+
+/**
+ * Fallback whatHappened text: clean prose passes through; JSON-looking scaffolding
+ * is salvaged into prose so the user never sees raw `{"whatHappened":...}` dumps.
+ */
+function fallbackText(text: string): string {
+  if (looksLikeJson(text)) return salvageProse(text);
+  return stripFences(text);
+}
+
 /** Return the first balanced {...} substring, or null. */
 export function extractJsonObject(text: string): string | null {
   const cleaned = stripFences(text);
@@ -71,7 +107,7 @@ export function parseSummarySections(text: string): SummarySections {
     if (parsed.success) {
       const d = parsed.data;
       return {
-        whatHappened: d.whatHappened || stripFences(text),
+        whatHappened: d.whatHappened || fallbackText(text),
         keyEvents: d.keyEvents,
         importantQuotes: d.importantQuotes,
         whatHappensNext: d.whatHappensNext,
@@ -80,7 +116,7 @@ export function parseSummarySections(text: string): SummarySections {
     }
   }
   return {
-    whatHappened: stripFences(text),
+    whatHappened: fallbackText(text),
     keyEvents: [],
     importantQuotes: [],
     whatHappensNext: '',
@@ -100,7 +136,7 @@ export function parseComparison(text: string, clusterId: string): SourceComparis
     clusterId,
     commonFacts: [],
     perspectives: [],
-    coverageDifferences: stripFences(text),
+    coverageDifferences: fallbackText(text),
   };
 }
 

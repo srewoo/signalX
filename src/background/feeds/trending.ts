@@ -18,6 +18,10 @@ const WINDOW_MS = 48 * 60 * 60 * 1000;
 const BIGRAM_WEIGHT = 3;
 const UNIGRAM_WEIGHT = 1;
 const MAX_TOPICS = 12;
+// A topic must show genuine recurrence to trend. A lone bigram (weight 3) from a
+// single headline must NOT qualify; require either two bigram occurrences
+// (>= BIGRAM_WEIGHT * 2) or equivalent accumulated weight (>= 6) across articles.
+const MIN_SCORE = BIGRAM_WEIGHT * 2;
 
 function words(title: string): readonly string[] {
   return title
@@ -52,7 +56,7 @@ export function trendingTopics(articles: readonly Article[], now = Date.now()): 
   }
 
   return [...scores.entries()]
-    .filter(([, score]) => score >= BIGRAM_WEIGHT * 2 || score >= 3)
+    .filter(([, score]) => score >= MIN_SCORE)
     .sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1))
     .slice(0, MAX_TOPICS)
     .map(([phrase]) => titleCase(phrase));

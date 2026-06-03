@@ -5,6 +5,7 @@
  */
 
 import { el, render } from '../lib/dom';
+import { icon } from '../lib/icons';
 import { backbar } from '../components/chrome';
 import { errorCard } from '../components/errorCard';
 import { COUNTRIES, SUMMARY_LENGTHS, PROVIDERS, MODELS, defaultModel } from '../lib/catalog';
@@ -70,7 +71,7 @@ function providerGrid(content: HTMLElement, ctx: AppContext, prefs: Preferences,
         draft.keyState = 'unknown';
         draw(content, ctx, prefs, draft);
       },
-    }, [`${p.glyph} ${p.name}`]),
+    }, [p.name]),
   );
   return el('div', { class: 'provider-grid', style: 'margin-bottom:14px;' }, cells);
 }
@@ -99,8 +100,8 @@ function keyField(content: HTMLElement, ctx: AppContext, prefs: Preferences, dra
 }
 
 function statusEl(draft: Draft): HTMLElement {
-  if (draft.keyState === 'valid') return el('div', { class: 'key-status' }, ['✓ Key verified · stored locally, encrypted']);
-  if (draft.keyState === 'invalid') return el('div', { class: 'key-status bad' }, ['✕ Key rejected — check and try again']);
+  if (draft.keyState === 'valid') return el('div', { class: 'key-status' }, [icon('check', 14), el('span', {}, ['Key verified · stored locally, encrypted'])]);
+  if (draft.keyState === 'invalid') return el('div', { class: 'key-status bad' }, [icon('x', 14), el('span', {}, ['Key rejected — check and try again'])]);
   if (draft.keyState === 'testing') return el('div', { class: 'key-status pending' }, ['Testing…']);
   return el('div', { class: 'key-status pending' }, ['Not verified yet']);
 }
@@ -131,7 +132,7 @@ function modelField(draft: Draft): HTMLElement {
 }
 
 function countryField(prefs: Preferences, ctx: AppContext): HTMLElement {
-  const options = COUNTRIES.map((c) => el('option', { value: c.code }, [`${c.flag} ${c.name}`]));
+  const options = COUNTRIES.map((c) => el('option', { value: c.code }, [c.name]));
   const select = el('select', { class: 'select', 'aria-label': 'Default country' }, options);
   select.value = prefs.country;
   select.addEventListener('change', () => {
@@ -179,7 +180,7 @@ function themeRow(prefs: Preferences): HTMLElement {
 
 function secureNote(): HTMLElement {
   return el('div', { class: 'secure-note' }, [
-    '🔒',
+    icon('lock', 16),
     el('span', {}, ['Your API key never leaves this device. It is encrypted in Chrome storage and sent only to your chosen AI provider — never to SignalX servers.']),
   ]);
 }

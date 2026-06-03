@@ -1,10 +1,11 @@
 /**
- * Home feed (prototype screens 1, 8, 12): country chip → bottom sheet, category
+ * Home feed (prototype screens 1, 8, 12): country chip opens a bottom sheet, category
  * chips, trending topic chips (tap runs a search), story cards, "updated Xm ago"
  * + fromCache banner, skeleton loading, offline error card.
  */
 
 import { el, render } from '../lib/dom';
+import { icon } from '../lib/icons';
 import { topbar } from '../components/chrome';
 import { storyCard } from '../components/storyCard';
 import { skelCards } from '../components/skeletons';
@@ -30,7 +31,10 @@ export function renderFeed(root: HTMLElement, ctx: AppContext): void {
 
 function searchbarStub(): HTMLElement {
   return el('div', { class: 'searchbar' }, [
-    el('button', { class: 'search-input', 'aria-label': 'Search any topic', onClick: () => navigate({ view: 'search' }) }, ['🔍  Search any topic…']),
+    el('button', { class: 'search-input', 'aria-label': 'Search any topic', onClick: () => navigate({ view: 'search' }) }, [
+      icon('search', 16),
+      el('span', {}, ['Search any topic…']),
+    ]),
   ]);
 }
 
@@ -51,7 +55,8 @@ function categoryChips(ctx: AppContext): HTMLElement {
 
 function countryHeader(ctx: AppContext, content: HTMLElement, fetchedAt: string, fromCache: boolean): HTMLElement {
   const chip = el('button', { class: 'country-chip', 'aria-label': 'Change country', onClick: () => openCountrySheet(ctx, content) }, [
-    `${country(ctx.country).flag} ${country(ctx.country).name}`,
+    icon('globe', 14),
+    el('span', {}, [country(ctx.country).name]),
   ]);
   return el('div', { class: 'section-h' }, [
     'Top stories',
@@ -61,9 +66,9 @@ function countryHeader(ctx: AppContext, content: HTMLElement, fetchedAt: string,
 
 function openCountrySheet(ctx: AppContext, content: HTMLElement): void {
   const rows = COUNTRIES.map((c) =>
-    optRow(`${c.flag} ${c.name}`, c.code === ctx.country, () => {
+    optRow(c.name, c.code === ctx.country, () => {
       void selectCountry(ctx, c.code, content, handle);
-    }),
+    }, 'globe'),
   );
   const handle = openSheet('Default country', rows);
 }

@@ -4,6 +4,7 @@
  */
 
 import { el, render } from '../lib/dom';
+import { icon } from '../lib/icons';
 import { backbar } from '../components/chrome';
 import { pipClass, pipInitial } from '../lib/catalog';
 import { shortAge } from '../lib/time';
@@ -43,7 +44,7 @@ function sourceRow(article: Article): HTMLElement {
       el('div', { class: 's-name' }, [`${article.sourceName} · ${shortAge(article.publishedAt)}`]),
       el('div', { class: 's-title' }, [article.title]),
     ]),
-    el('span', { class: 's-open' }, ['↗']),
+    el('span', { class: 's-open' }, [icon('external-link', 16)]),
   ]);
 }
 

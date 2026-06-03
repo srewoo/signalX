@@ -24,8 +24,13 @@ function post(port: chrome.runtime.Port, evt: StreamEvent): void {
   }
 }
 
-async function runStream(port: chrome.runtime.Port, start: StreamStart): Promise<void> {
+async function runStream(
+  port: chrome.runtime.Port,
+  start: StreamStart,
+  signal: AbortSignal,
+): Promise<void> {
   const cluster = await getClusterById(start.clusterId);
+  if (signal.aborted) return;
   if (!cluster) {
     post(port, {
       type: 'error',
@@ -34,26 +39,43 @@ async function runStream(port: chrome.runtime.Port, start: StreamStart): Promise
     return;
   }
   const provider = await getProvider();
+  if (signal.aborted) return;
   if (!provider) {
     post(port, { type: 'error', error: appError('NO_KEY', 'Add an API key to use AI features.') });
     return;
   }
 
-  const res = await generateSummary(cluster, start.summaryType, provider, (text) => {
-    post(port, { type: 'delta', section: 'whatHappened', text });
-  });
+  const res = await generateSummary(
+    cluster,
+    start.summaryType,
+    provider,
+    (text) => {
+      post(port, { type: 'delta', section: 'whatHappened', text });
+    },
+    signal,
+  );
+  // The user disconnected mid-flight: don't post to a dead port and don't treat
+  // the abort as a user-facing error.
+  if (signal.aborted) return;
   if (res.ok) post(port, { type: 'done', summary: res.value });
   else post(port, { type: 'error', error: res.error });
 }
 
 /** Wire a freshly connected summary-stream port to the generation pipeline. */
 export function attachStreamPort(port: chrome.runtime.Port): void {
+  // One controller per port: aborts the upstream fetch when the panel
+  // disconnects (Stop button / panel close) so we don't keep streaming to a
+  // dead port or bill the user for an abandoned request.
+  const controller = new AbortController();
+  port.onDisconnect.addListener(() => controller.abort());
+
   port.onMessage.addListener((msg: unknown) => {
     if (!isStreamStart(msg)) {
       post(port, { type: 'error', error: appError('INTERNAL', 'Invalid stream request.') });
       return;
     }
-    void runStream(port, msg).catch((e: unknown) => {
+    void runStream(port, msg, controller.signal).catch((e: unknown) => {
+      if (controller.signal.aborted) return; // user-initiated; nothing to report
       log.error('stream pipeline crashed', { reason: e instanceof Error ? e.name : 'unknown' });
       post(port, { type: 'error', error: appError('INTERNAL', 'Summary generation failed.') });
     });

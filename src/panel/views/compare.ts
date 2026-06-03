@@ -4,6 +4,7 @@
  */
 
 import { el, render } from '../lib/dom';
+import { icon } from '../lib/icons';
 import { backbar } from '../components/chrome';
 import { errorCard } from '../components/errorCard';
 import { skelLine } from '../components/skeletons';
@@ -66,8 +67,8 @@ function coverageDifferences(text: string): HTMLElement {
 }
 
 function feedbackRow(): HTMLElement {
-  const up = el('button', { class: 'fb-btn', 'aria-label': 'Useful' }, ['👍']);
-  const down = el('button', { class: 'fb-btn', 'aria-label': 'Not useful' }, ['👎']);
+  const up = el('button', { class: 'fb-btn', 'aria-label': 'Useful' }, [icon('thumbs-up', 16)]);
+  const down = el('button', { class: 'fb-btn', 'aria-label': 'Not useful' }, [icon('thumbs-down', 16)]);
   up.addEventListener('click', () => up.classList.add('on'));
   down.addEventListener('click', () => down.classList.add('on'));
   return el('div', { class: 'fb-row' }, [

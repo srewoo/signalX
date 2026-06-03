@@ -63,7 +63,10 @@ export async function getFeed(
   const cached = await readFeedCache(scope);
   if (cached && cached.fresh) {
     await indexClusters(cached.clusters);
-    return ok({ clusters: cached.clusters, fetchedAt: cached.fetchedAt, fromCache: true });
+    // A fresh cache hit is normal operation, not a degraded/offline state.
+    // fromCache:true is reserved for the stale-fallback-on-network-failure path
+    // below, which is what drives the panel's "offline" banner.
+    return ok({ clusters: cached.clusters, fetchedAt: cached.fetchedAt, fromCache: false });
   }
 
   const { articles, anyOk } = await aggregate(country, category);

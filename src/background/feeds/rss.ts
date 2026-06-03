@@ -33,18 +33,35 @@ function extractLink(block: string): string | null {
   return textLink ? textLink.trim() : null;
 }
 
+function decodeNumeric(code: string, radix: number): string {
+  const cp = parseInt(code, radix);
+  // Guard against NaN and out-of-range code points (RangeError) before
+  // String.fromCodePoint, which supports astral-plane chars (> 0xFFFF).
+  if (!Number.isFinite(cp) || cp < 0 || cp > 0x10ffff) return '';
+  try {
+    return String.fromCodePoint(cp);
+  } catch {
+    return '';
+  }
+}
+
 function decodeEntities(input: string): string {
-  return input
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'")
-    .replace(/&amp;/g, '&')
-    .replace(/&#(\d+);/g, (_m, code: string) => String.fromCharCode(Number(code)))
-    .replace(/\s+/g, ' ')
-    .trim();
+  return (
+    input
+      .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#0?39;|&apos;/g, "'")
+      .replace(/&#x([0-9a-fA-F]+);/g, (_m, code: string) => decodeNumeric(code, 16))
+      .replace(/&#(\d+);/g, (_m, code: string) => decodeNumeric(code, 10))
+      // Decode &amp; LAST so a double-encoded entity (&amp;lt;) resolves to the
+      // literal "&lt;" rather than being collapsed into "<" on this pass.
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
 }
 
 function parseDate(raw: string | null): string | null {

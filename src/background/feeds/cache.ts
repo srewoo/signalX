@@ -70,8 +70,14 @@ export async function writeFeedCache(
   await indexClusters(clusters);
 }
 
-/** Persist clusters into the id->cluster index (storage.session, bounded LRU-ish). */
-export async function indexClusters(clusters: readonly StoryCluster[]): Promise<void> {
+// The cluster index is a read-modify-write on storage.session. Concurrent
+// feed/trending/search calls would otherwise interleave their read and write
+// and clobber each other's entries (lost updates → spurious "story no longer
+// available"). Serialize all writes through a single in-memory promise chain so
+// each read-modify-write runs to completion before the next begins.
+let indexWriteQueue: Promise<void> = Promise.resolve();
+
+async function applyIndexWrite(clusters: readonly StoryCluster[]): Promise<void> {
   const raw = await readRaw(session(), CLUSTER_INDEX_KEY);
   const map: Record<string, unknown> =
     raw && typeof raw === 'object' ? { ...(raw as Record<string, unknown>) } : {};
@@ -82,6 +88,16 @@ export async function indexClusters(clusters: readonly StoryCluster[]): Promise<
     for (const k of keys.slice(0, keys.length - MAX_INDEXED_CLUSTERS)) delete map[k];
   }
   await writeRaw(session(), CLUSTER_INDEX_KEY, map);
+}
+
+/** Persist clusters into the id->cluster index (storage.session, bounded LRU-ish). */
+export function indexClusters(clusters: readonly StoryCluster[]): Promise<void> {
+  // Chain onto the queue; a failed write must not break the chain for later
+  // callers, so swallow its rejection at the link boundary (the awaited return
+  // still surfaces this call's own error).
+  const run = indexWriteQueue.then(() => applyIndexWrite(clusters));
+  indexWriteQueue = run.catch(() => undefined);
+  return run;
 }
 
 /** Resolve a cluster by id from the session index. Survives SW restarts. */

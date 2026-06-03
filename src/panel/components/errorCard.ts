@@ -5,6 +5,7 @@
  */
 
 import { el } from '../lib/dom';
+import { icon, type IconName } from '../lib/icons';
 import type { AppError } from '../../shared/contracts';
 
 export interface ErrorActions {
@@ -22,14 +23,18 @@ export interface ErrorActions {
 
 interface Spec {
   readonly tone: 'err-red' | 'err-amber';
+  readonly glyph: IconName;
   readonly title: string;
   readonly body: (e: AppError) => string;
   readonly buttons: (a: ErrorActions) => readonly HTMLButtonElement[];
 }
 
-function btn(label: string, handler: (() => void) | undefined, solid: boolean): HTMLButtonElement | null {
+function btn(label: string, handler: (() => void) | undefined, solid: boolean, trailingIcon?: IconName): HTMLButtonElement | null {
   if (!handler) return null;
-  return el('button', { class: solid ? 'err-btn solid' : 'err-btn', onClick: handler }, [label]);
+  return el('button', { class: solid ? 'err-btn solid' : 'err-btn', onClick: handler }, [
+    label,
+    trailingIcon ? icon(trailingIcon, 14) : null,
+  ]);
 }
 
 function compact(...maybe: readonly (HTMLButtonElement | null)[]): readonly HTMLButtonElement[] {
@@ -39,7 +44,8 @@ function compact(...maybe: readonly (HTMLButtonElement | null)[]): readonly HTML
 const SPECS: Record<AppError['code'], Spec> = {
   RATE_LIMITED: {
     tone: 'err-amber',
-    title: '⏳ Your AI provider is rate-limiting requests',
+    glyph: 'clock',
+    title: 'Your AI provider is rate-limiting requests',
     body: (e) =>
       e.retryAfterSec !== undefined
         ? `Returned 429. SignalX will retry automatically in ${e.retryAfterSec}s.`
@@ -48,49 +54,57 @@ const SPECS: Record<AppError['code'], Spec> = {
   },
   INVALID_KEY: {
     tone: 'err-red',
-    title: '🔑 API key rejected (401)',
+    glyph: 'key',
+    title: 'API key rejected (401)',
     body: (e) => e.message,
     buttons: (a) => compact(btn('Update key', a.onUpdateKey, false), btn('Test key', a.onTestKey, true)),
   },
   NO_KEY: {
     tone: 'err-amber',
-    title: '✦ Add an AI key to use this',
+    glyph: 'sparkles',
+    title: 'Add an AI key to use this',
     body: (e) => e.message,
     buttons: (a) => compact(btn('Add key', a.onUpdateKey, false)),
   },
   BILLING: {
     tone: 'err-red',
-    title: '💳 Provider account out of credits',
+    glyph: 'credit-card',
+    title: 'Provider account out of credits',
     body: (e) => e.message,
-    buttons: (a) => compact(btn('Switch provider', a.onSwitchProvider, false), btn('Open billing ↗', a.onOpenBilling, true)),
+    buttons: (a) => compact(btn('Switch provider', a.onSwitchProvider, false), btn('Open billing', a.onOpenBilling, true, 'external-link')),
   },
   OFFLINE: {
     tone: 'err-amber',
-    title: "📡 Can't reach news sources",
+    glyph: 'wifi-off',
+    title: "Can't reach news sources",
     body: (e) => e.message,
     buttons: (a) => compact(btn('Retry', a.onRetry, false)),
   },
   FEED_UNAVAILABLE: {
     tone: 'err-amber',
-    title: "📡 Can't reach news sources",
+    glyph: 'wifi-off',
+    title: "Can't reach news sources",
     body: (e) => e.message,
     buttons: (a) => compact(btn('Retry', a.onRetry, false)),
   },
   TIMEOUT: {
     tone: 'err-amber',
-    title: '⏱ Request timed out',
+    glyph: 'clock',
+    title: 'Request timed out',
     body: (e) => e.message,
     buttons: (a) => compact(btn('Retry', a.onRetry, false)),
   },
   PROVIDER_ERROR: {
     tone: 'err-red',
-    title: '⚠ AI provider error',
+    glyph: 'alert-triangle',
+    title: 'AI provider error',
     body: (e) => e.message,
     buttons: (a) => compact(btn('Retry', a.onRetry, false)),
   },
   INTERNAL: {
     tone: 'err-red',
-    title: '⚠ Something went wrong',
+    glyph: 'alert-triangle',
+    title: 'Something went wrong',
     body: (e) => e.message,
     buttons: (a) => compact(btn('Retry', a.onRetry, false)),
   },
@@ -100,7 +114,7 @@ export function errorCard(error: AppError, actions: ErrorActions = {}): HTMLElem
   const spec = SPECS[error.code];
   const buttons = spec.buttons(actions);
   return el('div', { class: `err-card ${spec.tone}`, role: 'alert' }, [
-    el('div', { class: 'e-title' }, [spec.title]),
+    el('div', { class: 'e-title' }, [icon(spec.glyph, 16), el('span', {}, [spec.title])]),
     spec.body(error),
     buttons.length > 0 ? el('div', { class: 'err-actions' }, buttons) : null,
   ]);

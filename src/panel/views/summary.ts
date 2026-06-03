@@ -1,11 +1,12 @@
 /**
  * AI Summary (prototype screens 2-5, 9). Short/Detailed/Keyfacts tabs; streaming
  * state (text fills "what happened" with a blinking cursor, skeletons for later
- * sections, ◼ Stop disconnects the port); complete state with gen-meta + feedback
- * + regenerate + compare/sources actions; all AppErrorCode error cards; save sheet.
+ * sections, a Stop control disconnects the port); complete state with gen-meta +
+ * feedback + regenerate + compare/sources actions; all AppErrorCode error cards; save sheet.
  */
 
 import { el, render } from '../lib/dom';
+import { icon } from '../lib/icons';
 import { backbar, iconAction } from '../components/chrome';
 import { errorCard, type ErrorActions } from '../components/errorCard';
 import { skelLine } from '../components/skeletons';
@@ -28,7 +29,7 @@ interface Session {
 
 export function renderSummary(root: HTMLElement, ctx: AppContext, cluster: StoryCluster, type: SummaryType): void {
   const content = el('div', { class: 'content' });
-  const stopBtn = el('button', { class: 'stop-btn', 'aria-label': 'Stop generating', onClick: () => session.controller?.stop() }, ['◼ Stop']);
+  const stopBtn = el('button', { class: 'stop-btn', 'aria-label': 'Stop generating', onClick: () => session.controller?.stop() }, [icon('square', 14), el('span', {}, ['Stop'])]);
   const session: Session = { content, ctx, cluster, stopBtn, type, controller: undefined, partial: {} };
 
   render(root, backbar('Back', () => { session.controller?.stop(); navigate({ view: 'feed' }); }, stopBtn), content);
@@ -85,7 +86,7 @@ function renderStreaming(s: Session): void {
     s.content,
     header(s),
     el('div', { class: 'gen-meta' }, [
-      el('span', { class: 'gen-live' }, ['✦ Generating…']),
+      el('span', { class: 'gen-live' }, [icon('sparkles', 13), el('span', {}, ['Generating…'])]),
       el('span', { class: 'dot' }),
       `reading ${s.cluster.articles.length} sources`,
     ]),
@@ -126,14 +127,14 @@ function renderComplete(s: Session, summary: Summary): void {
     renderSummarySections(summary),
     feedbackRow(s),
     el('div', { class: 'actions-row', style: 'margin-top:10px;' }, [
-      el('button', { class: 'act-btn primary', onClick: () => navigate({ view: 'compare', cluster: s.cluster }) }, ['⇄ Compare sources']),
+      el('button', { class: 'act-btn primary', onClick: () => navigate({ view: 'compare', cluster: s.cluster }) }, [icon('arrow-left-right', 15), el('span', {}, ['Compare sources'])]),
       el('button', { class: 'act-btn', onClick: () => navigate({ view: 'sources', cluster: s.cluster }) }, [`Sources (${s.cluster.articles.length})`]),
     ]),
   );
 }
 
 function completeBar(s: Session, summary: Summary): HTMLElement {
-  const save = iconAction('🔖', 'Save summary', () =>
+  const save = iconAction('bookmark', 'Save summary', () =>
     void openSaveSheet((folderId) => ({
       kind: 'summary',
       id: `${s.cluster.id}:${s.type}`,
@@ -143,7 +144,7 @@ function completeBar(s: Session, summary: Summary): HTMLElement {
       summary,
     })),
   );
-  const sources = iconAction('⤴', 'Open sources', () => navigate({ view: 'sources', cluster: s.cluster }));
+  const sources = iconAction('external-link', 'Open sources', () => navigate({ view: 'sources', cluster: s.cluster }));
   return backbar('Back', () => navigate({ view: 'feed' }), save, sources);
 }
 
@@ -152,7 +153,7 @@ function genMeta(s: Session, summary: Summary): HTMLElement {
     ? 'cached · $0.000'
     : `${summary.model} · ${(summary.latencyMs / 1000).toFixed(1)}s · ~$${summary.estCostUsd.toFixed(3)}`;
   return el('div', { class: 'gen-meta' }, [
-    el('span', { class: 'ok' }, ['✓ Generated']),
+    el('span', { class: 'ok' }, [icon('check', 13), el('span', {}, ['Generated'])]),
     el('span', { class: 'dot' }),
     `${s.cluster.articles.length} sources`,
     el('span', { class: 'dot' }),
@@ -161,9 +162,9 @@ function genMeta(s: Session, summary: Summary): HTMLElement {
 }
 
 function feedbackRow(s: Session): HTMLElement {
-  const up = el('button', { class: 'fb-btn', 'aria-label': 'Useful', onClick: () => void submit('up') }, ['👍']);
-  const down = el('button', { class: 'fb-btn', 'aria-label': 'Not useful', onClick: () => void submit('down') }, ['👎']);
-  const regen = el('button', { class: 'fb-btn', title: 'Regenerate', 'aria-label': 'Regenerate summary', onClick: () => { s.controller?.stop(); renderStreaming(s); } }, ['↻']);
+  const up = el('button', { class: 'fb-btn', 'aria-label': 'Useful', onClick: () => void submit('up') }, [icon('thumbs-up', 16)]);
+  const down = el('button', { class: 'fb-btn', 'aria-label': 'Not useful', onClick: () => void submit('down') }, [icon('thumbs-down', 16)]);
+  const regen = el('button', { class: 'fb-btn', title: 'Regenerate', 'aria-label': 'Regenerate summary', onClick: () => { s.controller?.stop(); renderStreaming(s); } }, [icon('refresh-cw', 16)]);
 
   const submit = async (verdict: 'up' | 'down'): Promise<void> => {
     up.classList.toggle('on', verdict === 'up');

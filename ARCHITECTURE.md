@@ -41,6 +41,11 @@ the user's chosen AI provider. News fetched directly from public RSS feeds.
 6. API key stored via chrome.storage.local with AES-GCM encryption
    (WebCrypto, key derived from a per-install random secret). Never in sync
    storage, never logged.
+   Threat model (honest): the AES-GCM key lives in storage.local beside the
+   ciphertext, so anyone who can read storage.local can decrypt it.
+   This protects against sync leakage and casual at-rest dumps — NOT against a
+   local attacker or another extension with storage access. It is sync-leak
+   prevention + obfuscation, not real key-management security.
 7. Retry policy: 429 → backoff with jitter, max 3, honor Retry-After.
    5xx/timeout → 1 retry. 401/billing → no retry, surface actionable error.
 8. Feed cache: chrome.storage.session, 5-min TTL, stale-while-revalidate;

@@ -1,3 +1,8 @@
+/* Inter variable font, bundled locally (no remote Google Fonts <link>): the
+   extension must work fully offline per the PRD and avoid remote-origin asset
+   requests. Vite resolves this import and bundles the woff2 into the build. */
+@import '@fontsource-variable/inter';
+
 /* SignalX panel styles — ported from design/signalx-ui-prototype.html.
    Token + component classes are kept verbatim-ish so the rendered DOM matches
    the approved 14-screen visual spec. */
@@ -8,7 +13,7 @@
   --green: #1e8e3e; --green-soft: #e6f4ea; --red: #c5221f; --red-soft: #fce8e6;
   --amber: #b06000; --amber-soft: #fef7e0;
   --radius: 10px;
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+  --font: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Dark tokens shared by the system-default media query and the manual override. */
@@ -29,7 +34,16 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; }
-body { font-family: var(--font); background: var(--bg); color: var(--ink); }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Inline SVG icons inherit text color via currentColor and align as glyphs. */
+.icon { flex: none; display: inline-block; vertical-align: middle; }
 
 /* In the extension the panel fills the side-panel viewport (~380px wide). */
 .panel { width: 100%; height: 100vh; background: var(--bg); color: var(--ink); overflow: hidden; display: flex; flex-direction: column; position: relative; }
@@ -41,13 +55,13 @@ button { font-family: var(--font); }
 /* ===== Top bar with integrated icon-rail nav ===== */
 .topbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .logo { width: 26px; height: 26px; border-radius: 7px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
-.topbar .title { font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+.topbar .title { font-weight: 700; font-size: 15px; letter-spacing: -.015em; }
 .topbar .spacer { flex: 1; }
 .nav-rail { display: flex; gap: 2px; }
 .nav-ico { width: 30px; height: 30px; border: none; background: transparent; border-radius: 8px; cursor: pointer; color: var(--ink-3); font-size: 15px; display: flex; align-items: center; justify-content: center; }
 .nav-ico.on { background: var(--accent-soft); color: var(--accent); }
 .nav-ico:hover { background: var(--line); }
-.country-chip { font-size: 12px; font-weight: 600; color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; background: var(--bg); cursor: pointer; }
+.country-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; background: var(--bg); cursor: pointer; }
 .back-row { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer; border: none; background: transparent; }
 
 .searchbar { padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--line); }
@@ -73,7 +87,7 @@ button { font-family: var(--font); }
 .card .meta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-3); margin-bottom: 6px; flex-wrap: wrap; }
 .src { font-weight: 700; color: var(--ink-2); }
 .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-3); flex-shrink: 0; }
-.card h3 { font-size: 14px; line-height: 1.4; font-weight: 600; letter-spacing: -.01em; }
+.card h3 { font-size: 14px; line-height: 1.4; font-weight: 600; letter-spacing: -.015em; }
 .card .sources-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
 .src-pile { display: flex; }
 .src-pip { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--surface); font-size: 8px; font-weight: 800; color: #fff; display: flex; align-items: center; justify-content: center; margin-left: -5px; }
@@ -90,13 +104,13 @@ button { font-family: var(--font); }
 .sum-block p, .sum-block li { font-size: 13px; line-height: 1.6; color: var(--ink); }
 .sum-block ul { padding-left: 18px; }
 .sum-block li { margin-bottom: 4px; }
-.summary-title { font-size: 16px; font-weight: 700; line-height: 1.35; margin: 4px 0 10px; }
+.summary-title { font-size: 16px; font-weight: 700; line-height: 1.35; letter-spacing: -.015em; margin: 4px 0 10px; }
 .quote { border-left: 3px solid var(--line); padding-left: 10px; color: var(--ink-2); font-style: italic; }
 .gen-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--ink-3); margin-bottom: 12px; flex-wrap: wrap; }
-.gen-meta .ok { color: var(--green); font-weight: 600; }
-.gen-meta .gen-live { color: var(--accent); font-weight: 700; }
+.gen-meta .ok { display: inline-flex; align-items: center; gap: 4px; color: var(--green); font-weight: 600; }
+.gen-meta .gen-live { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-weight: 700; }
 .actions-row { display: flex; gap: 8px; margin-top: 4px; }
-.act-btn { flex: 1; font-size: 12px; font-weight: 600; padding: 9px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; text-align: center; }
+.act-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 9px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; text-align: center; }
 .act-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .act-btn.borderless { border: none; }
 .fb-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; justify-content: flex-end; }
@@ -134,14 +148,14 @@ button { font-family: var(--font); }
 
 .cursor { display: inline-block; width: 7px; height: 14px; background: var(--accent); vertical-align: text-bottom; animation: blink 1s steps(1) infinite; border-radius: 1px; }
 @keyframes blink { 50% { opacity: 0; } }
-.stop-btn { font-size: 11px; font-weight: 700; color: var(--red); border: 1px solid var(--red); background: transparent; border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+.stop-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--red); border: 1px solid var(--red); background: transparent; border-radius: 999px; padding: 3px 10px; cursor: pointer; }
 
 .err-card { border-radius: var(--radius); padding: 14px; margin-bottom: 10px; font-size: 12.5px; line-height: 1.55; }
 .err-card .e-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
 .err-red { background: var(--red-soft); color: var(--red); }
 .err-amber { background: var(--amber-soft); color: var(--amber); }
 .err-actions { display: flex; gap: 8px; margin-top: 10px; }
-.err-btn { font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 8px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+.err-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 8px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
 .err-btn.solid { background: var(--surface); border-color: var(--line); }
 
 .sheet-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-end; z-index: 10; }
@@ -151,7 +165,8 @@ button { font-family: var(--font); }
 .opt-row { display: flex; align-items: center; gap: 10px; padding: 12px 10px; border-radius: 8px; cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--ink); width: 100%; text-align: left; border: none; background: transparent; }
 .opt-row:hover { background: var(--bg); }
 .opt-row.sel { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
-.opt-row .check { margin-left: auto; font-weight: 800; }
+.opt-row .opt-label { flex: 1; }
+.opt-row .check { margin-left: auto; display: inline-flex; color: var(--accent); }
 .new-folder { display: flex; align-items: center; gap: 8px; padding: 12px 10px; font-size: 13px; font-weight: 600; color: var(--accent); cursor: pointer; border: none; background: transparent; width: 100%; text-align: left; }
 
 .src-row { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 11px 12px; margin-bottom: 8px; cursor: pointer; width: 100%; text-align: left; }
@@ -168,7 +183,12 @@ button { font-family: var(--font); }
 .pref-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 2px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 500; color: var(--ink); }
 
 .empty-state { text-align: center; color: var(--ink-3); font-size: 13px; padding: 40px 16px; line-height: 1.6; }
-.firstrun-mark { font-size: 40px; }
-.firstrun-h { font-size: 17px; font-weight: 700; }
+.firstrun-mark { display: inline-flex; color: var(--accent); }
+
+/* AI accent marks: the sparkles glyph tinted with the accent color. */
+.ai-badge, .ai-overview { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); }
+.ai-overview.muted { color: var(--ink-3); }
+.folder-row .f-chevron { display: inline-flex; color: var(--ink-3); }
+.firstrun-h { font-size: 17px; font-weight: 700; letter-spacing: -.015em; }
 .firstrun-p { font-size: 13px; color: var(--ink-2); line-height: 1.6; max-width: 260px; }
 .firstrun-btn { flex: none; width: 220px; padding: 11px 0; }

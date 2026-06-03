@@ -1,9 +1,10 @@
 /**
  * Save-to-folder bottom sheet (prototype screen 9). Lists existing folders,
- * supports inline "＋ New folder" creation, then persists a SavedItem.
+ * supports inline "New folder" creation, then persists a SavedItem.
  */
 
 import { el, render } from '../lib/dom';
+import { icon } from '../lib/icons';
 import { openSheet, optRow } from './sheet';
 import { send } from '../lib/messaging';
 import type { Folder, SavedItem } from '../../shared/contracts';
@@ -42,10 +43,10 @@ export async function openSaveSheet(buildItem: (folderId: string) => SavedItem):
 
   function draw(): void {
     const rows: HTMLElement[] = folders.map((f) =>
-      optRow(`📁 ${f.name}`, f.id === selectedId, () => {
+      optRow(f.name, f.id === selectedId, () => {
         selectedId = f.id;
         draw();
-      }),
+      }, 'folder'),
     );
 
     const newFolderControl = creating
@@ -56,7 +57,7 @@ export async function openSaveSheet(buildItem: (folderId: string) => SavedItem):
             if (e.key === 'Enter') void onCreate((e.currentTarget as HTMLInputElement).value);
           },
         })
-      : el('button', { class: 'new-folder', onClick: () => { creating = true; draw(); } }, ['＋ New folder']);
+      : el('button', { class: 'new-folder', onClick: () => { creating = true; draw(); } }, [icon('plus', 16), el('span', {}, ['New folder'])]);
 
     render(
       bodyHost,

@@ -8,6 +8,21 @@ import { log } from './logger';
 
 const PANEL_PATH = 'src/panel/panel.html';
 
+// The manifest's side_panel.default_path registers the panel resource but would
+// otherwise auto-enable it on every tab. Disable it globally on install so the
+// panel only ever appears on tabs where the user explicitly opened it.
+chrome.runtime.onInstalled.addListener(() => {
+  void (async () => {
+    try {
+      await chrome.sidePanel.setOptions({ enabled: false });
+    } catch (e) {
+      log.error('failed to disable global side panel', {
+        reason: e instanceof Error ? e.name : 'unknown',
+      });
+    }
+  })();
+});
+
 // Open the side panel for the clicked tab only (per-tab, never global).
 chrome.action.onClicked.addListener((tab) => {
   if (tab.id === undefined) return;

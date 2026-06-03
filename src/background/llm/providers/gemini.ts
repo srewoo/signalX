@@ -7,13 +7,15 @@ export const geminiClient: ProviderClient = {
   async streamCompletion(opts: StreamOptions, onDelta: OnDelta): Promise<Result<StreamSuccess>> {
     const endpoint =
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(opts.model)}` +
-      `:streamGenerateContent?alt=sse&key=${encodeURIComponent(opts.apiKey)}`;
+      `:streamGenerateContent?alt=sse`;
     return runStream(
       () =>
         fetch(endpoint, {
           method: 'POST',
           signal: opts.signal,
-          headers: { 'content-type': 'application/json' },
+          // Key goes in the x-goog-api-key header, never the URL query string,
+          // so it can't leak via request logs, history, or referrers.
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': opts.apiKey },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: opts.system }] },
             contents: [{ role: 'user', parts: [{ text: opts.user }] }],

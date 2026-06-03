@@ -24,11 +24,19 @@ export async function streamWithRetry(
   user: string,
   maxTokens: number,
   onDelta: OnDelta,
+  external?: AbortSignal,
 ): Promise<Result<RunResult>> {
   const client = clientFor(settings.provider);
   let attempt = 0;
   for (;;) {
+    // Abort the fetch if EITHER the per-request timeout fires OR the caller's
+    // external signal (e.g. the user disconnecting the stream port) fires.
     const controller = new AbortController();
+    const onExternalAbort = (): void => controller.abort();
+    if (external) {
+      if (external.aborted) controller.abort();
+      else external.addEventListener('abort', onExternalAbort, { once: true });
+    }
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     let streamed = '';
     const collect: OnDelta = (chunk) => {
@@ -50,8 +58,12 @@ export async function streamWithRetry(
       );
     } finally {
       clearTimeout(timer);
+      if (external) external.removeEventListener('abort', onExternalAbort);
     }
     if (res.ok) return ok({ text: res.value.text || streamed });
+
+    // External (user) abort: stop immediately, never retry a cancelled request.
+    if (external?.aborted) return err(res.error);
 
     const budget = retryBudget(res.error);
     if (attempt >= budget) return err(res.error);

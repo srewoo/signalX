@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SignalX — UI/UX Prototype v2 (Chrome Side Panel)</title>
+<!-- Remote Google Fonts is fine HERE: the prototype is a plain spec webpage.
+     The real extension bundles Inter locally instead (@fontsource-variable/inter). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..800&display=swap">
 <style>
   :root {
     --bg: #fafafa; --surface: #fff; --ink: #111418; --ink-2: #5c6470; --ink-3: #9aa3af;
@@ -11,7 +16,7 @@
     --green: #1e8e3e; --green-soft: #e6f4ea; --red: #c5221f; --red-soft: #fce8e6;
     --amber: #b06000; --amber-soft: #fef7e0;
     --radius: 10px;
-    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
   /* Dark theme — applied via .dark on a panel; in the real extension via prefers-color-scheme + manual toggle */
   .dark {
@@ -21,7 +26,9 @@
     --amber: #fdd663; --amber-soft: #332b13;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: var(--font); background: #ececef; color: #111418; display: flex; gap: 32px; flex-wrap: wrap; padding: 40px; justify-content: center; }
+  body { font-family: var(--font); background: #ececef; color: #111418; display: flex; gap: 32px; flex-wrap: wrap; padding: 40px; justify-content: center; font-feature-settings: 'cv11', 'ss01'; -webkit-font-smoothing: antialiased; }
+  /* Inline SVG icons (Lucide style) inherit color via currentColor. */
+  .icon { flex: none; display: inline-flex; vertical-align: middle; align-items: center; }
   .screen-wrap { display: flex; flex-direction: column; gap: 8px; }
   .screen-label { font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: .08em; padding-left: 4px; }
   .panel { width: 380px; height: 720px; background: var(--bg); color: var(--ink); border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.12); overflow: hidden; display: flex; flex-direction: column; position: relative; }
@@ -29,7 +36,7 @@
   /* ===== Top bar with integrated icon-rail nav (replaces bottom nav — glanceable at top of a tall panel) ===== */
   .topbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--line); flex-shrink: 0; }
   .logo { width: 26px; height: 26px; border-radius: 7px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
-  .topbar .title { font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+  .topbar .title { font-weight: 700; font-size: 15px; letter-spacing: -.015em; }
   .topbar .spacer { flex: 1; }
   .nav-rail { display: flex; gap: 2px; }
   .nav-ico { width: 30px; height: 30px; border: none; background: transparent; border-radius: 8px; cursor: pointer; color: var(--ink-3); font-size: 15px; display: flex; align-items: center; justify-content: center; }
@@ -55,7 +62,7 @@
   .card .meta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-3); margin-bottom: 6px; flex-wrap: wrap; }
   .src { font-weight: 700; color: var(--ink-2); }
   .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-3); }
-  .card h3 { font-size: 14px; line-height: 1.4; font-weight: 600; letter-spacing: -.01em; }
+  .card h3 { font-size: 14px; line-height: 1.4; font-weight: 600; letter-spacing: -.015em; }
   .card .sources-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
   .src-pile { display: flex; }
   .src-pip { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--surface); font-size: 8px; font-weight: 800; color: #fff; display: flex; align-items: center; justify-content: center; margin-left: -5px; }
@@ -168,7 +175,7 @@
       <div class="chips" style="padding: 0 0 10px;">
         <div class="topic-chip"># RBI Policy</div><div class="topic-chip"># IPL Final</div><div class="topic-chip"># AI Act</div><div class="topic-chip"># Elections</div>
       </div>
-      <div class="section-h">Top stories &nbsp;<span style="margin-left:auto; font-weight:600; color:var(--ink-3); text-transform:none; letter-spacing:0;">🇮🇳 India · updated 2m ago</span></div>
+      <div class="section-h">Top stories &nbsp;<span style="margin-left:auto; font-weight:600; color:var(--ink-3); text-transform:none; letter-spacing:0;">🌍 India · updated 2m ago</span></div>
       <div class="card">
         <div class="meta"><span class="src">Reuters</span><span class="dot"></span><span>42 min ago</span><span class="dot"></span><span>6 sources</span></div>
         <h3>RBI holds repo rate steady at 6.5%, signals data-driven approach for rest of FY27</h3>
@@ -409,12 +416,12 @@
       <div class="sheet">
         <div class="grab"></div>
         <h3>Default country</h3>
-        <div class="opt-row sel">🇮🇳 India <span class="check">✓</span></div>
-        <div class="opt-row">🇺🇸 United States</div>
-        <div class="opt-row">🇬🇧 United Kingdom</div>
-        <div class="opt-row">🇦🇺 Australia</div>
-        <div class="opt-row">🇸🇬 Singapore</div>
-        <div class="opt-row">🇦🇪 UAE</div>
+        <div class="opt-row sel">🌍 India <span class="check">✓</span></div>
+        <div class="opt-row">🌍 United States</div>
+        <div class="opt-row">🌍 United Kingdom</div>
+        <div class="opt-row">🌍 Australia</div>
+        <div class="opt-row">🌍 Singapore</div>
+        <div class="opt-row">🌍 UAE</div>
         <div class="opt-row">🌍 Global</div>
       </div>
     </div>
@@ -458,7 +465,7 @@
       <div class="card" style="border-style:dashed;">
         <div class="meta"><span style="color:var(--ink-3); font-weight:700;">✦ AI Overview</span></div>
         <p style="font-size:12.5px; line-height:1.55; color:var(--ink-3);">Add your AI key in Settings to get an instant overview of all 14 results.</p>
-        <div class="sources-row"><span class="summarize-link">Add key →</span></div>
+        <div class="sources-row"><span class="summarize-link">Add key ›</span></div>
       </div>
       <div class="card">
         <div class="meta"><span class="src">Reuters</span><span class="dot"></span><span>Jun 2</span></div>
@@ -488,7 +495,7 @@
     <div class="content">
       <div class="section-h">AI Provider</div>
       <div class="provider-grid" style="margin-bottom:14px;">
-        <div class="provider on">◈ Anthropic</div><div class="provider">◯ OpenAI</div><div class="provider">◆ Gemini</div><div class="provider">⊞ OpenRouter</div>
+        <div class="provider on">Anthropic</div><div class="provider">OpenAI</div><div class="provider">Gemini</div><div class="provider">OpenRouter</div>
       </div>
       <div class="field">
         <label>API Key</label>
@@ -501,7 +508,7 @@
         <div class="hint">Haiku summarizes a 6-article cluster in ~4s for ~$0.002.</div>
       </div>
       <div class="section-h" style="margin-top:18px;">Preferences</div>
-      <div class="field"><label>Default country</label><select class="select"><option>🇮🇳 India</option></select></div>
+      <div class="field"><label>Default country</label><select class="select"><option>🌍 India</option></select></div>
       <div class="field"><label>Default summary length</label><select class="select"><option>Short (100 words)</option></select></div>
       <div class="pref-row">Dark mode <div style="display:flex; align-items:center; gap:8px;"><span class="hint" style="margin:0;">Auto (system)</span><div class="toggle"></div></div></div>
       <div class="secure-note">🔒 <span>Your API key never leaves this device. It is encrypted with Chrome storage and sent only to your chosen AI provider — never to SignalX servers.</span></div>
@@ -590,5 +597,94 @@
   </div>
 </div>
 
+<!-- Lucide-style icon sprite. These <symbol> paths are static, trusted, compile-time
+     constants — mirrors src/panel/lib/icons.ts so the spec matches the build. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="icon-home" viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"/><path d="M9 21v-6h6v6"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="icon-bookmark" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="icon-thumbs-up" viewBox="0 0 24 24"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88z"/></symbol>
+    <symbol id="icon-thumbs-down" viewBox="0 0 24 24"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88z"/></symbol>
+    <symbol id="icon-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+    <symbol id="icon-square" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/></symbol>
+    <symbol id="icon-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="icon-external-link" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="icon-arrow-left-right" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></symbol>
+    <symbol id="icon-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="icon-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol>
+    <symbol id="icon-credit-card" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></symbol>
+    <symbol id="icon-key" viewBox="0 0 24 24"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/></symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="icon-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></symbol>
+    <symbol id="icon-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></symbol>
+    <symbol id="icon-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="icon-alert-triangle" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  </defs>
+</svg>
+
+<script>
+  // Replace the prototype's placeholder glyphs with the inline SVG sprite so the
+  // spec doc matches the shipped panel. Country flags + source-pip letters stay.
+  (function () {
+    var GLYPHS = {
+      '⌂': 'home', '🔍': 'search', '🔖': 'bookmark', '⚙': 'settings',
+      '👍': 'thumbs-up', '👎': 'thumbs-down', '↻': 'refresh-cw',
+      '◼': 'square', '✕': 'x', '↗': 'external-link', '⤴': 'share',
+      '＋': 'plus', '‹': 'chevron-left', '›': 'chevron-right',
+      '⇄': 'arrow-left-right', '📁': 'folder', '🔒': 'lock',
+      '📡': 'wifi-off', '💳': 'credit-card', '🔑': 'key',
+      '⏳': 'clock', '⏱': 'clock', '✦': 'sparkles', '🌍': 'globe',
+      '✓': 'check', '⚠': 'alert-triangle'
+    };
+    var ACCENT = { sparkles: 1 };
+    var keys = Object.keys(GLYPHS);
+    var re = new RegExp('(' + keys.map(function (k) {
+      return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }).join('|') + ')', 'g');
+
+    function makeIcon(name) {
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'icon');
+      svg.setAttribute('width', '16');
+      svg.setAttribute('height', '16');
+      svg.setAttribute('fill', 'none');
+      svg.setAttribute('stroke', 'currentColor');
+      svg.setAttribute('stroke-width', '2');
+      svg.setAttribute('stroke-linecap', 'round');
+      svg.setAttribute('stroke-linejoin', 'round');
+      if (ACCENT[name]) svg.style.color = 'var(--accent)';
+      var use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      use.setAttribute('href', '#icon-' + name);
+      svg.appendChild(use);
+      return svg;
+    }
+
+    function walk(node) {
+      if (node.nodeType === 3) {
+        if (!re.test(node.nodeValue)) return;
+        re.lastIndex = 0;
+        var frag = document.createDocumentFragment();
+        var text = node.nodeValue, last = 0, m;
+        while ((m = re.exec(text)) !== null) {
+          if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+          frag.appendChild(makeIcon(GLYPHS[m[0]]));
+          last = m.index + m[0].length;
+        }
+        if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+        node.parentNode.replaceChild(frag, node);
+      } else if (node.nodeType === 1 && node.nodeName !== 'SCRIPT' && node.nodeName !== 'STYLE' && node.nodeName !== 'svg') {
+        for (var i = node.childNodes.length - 1; i >= 0; i--) walk(node.childNodes[i]);
+      }
+    }
+    walk(document.body);
+  })();
+</script>
 </body>
 </html>

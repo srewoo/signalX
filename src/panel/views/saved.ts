@@ -1,9 +1,10 @@
 /**
  * Saved / Bookmarks (prototype screen 13): folders list + recently saved.
- * Summaries carry a ✦ badge; tapping a saved summary reopens it (cached).
+ * Summaries carry a sparkles badge; tapping a saved summary reopens it (cached).
  */
 
 import { el, render } from '../lib/dom';
+import { icon } from '../lib/icons';
 import { topbar } from '../components/chrome';
 import { skelCards } from '../components/skeletons';
 import { errorCard } from '../components/errorCard';
@@ -37,7 +38,7 @@ async function load(content: HTMLElement): Promise<void> {
   const items = itemsRes.value;
 
   if (folders.length === 0 && items.length === 0) {
-    render(content, el('div', { class: 'empty-state' }, ['Nothing saved yet. Tap 🔖 on a summary or article to save it here.']));
+    render(content, el('div', { class: 'empty-state' }, ['Nothing saved yet. Use the bookmark action on a summary or article to save it here.']));
     return;
   }
 
@@ -48,10 +49,10 @@ function foldersSection(folders: readonly Folder[], items: readonly SavedItem[])
   const count = (id: string): number => items.filter((i) => i.folderId === id).length;
   const rows = folders.map((f) =>
     el('button', { class: 'folder-row', 'aria-label': `Folder ${f.name}, ${count(f.id)} items` }, [
-      '📁',
+      icon('folder', 18),
       el('span', { class: 'f-name' }, [f.name]),
       el('span', { class: 'f-count' }, [`${count(f.id)} items`]),
-      el('span', { style: 'color:var(--ink-3);' }, ['›']),
+      el('span', { class: 'f-chevron' }, [icon('chevron-right', 16)]),
     ]),
   );
   return el('div', {}, [
@@ -72,7 +73,7 @@ function recentSection(items: readonly SavedItem[]): HTMLElement {
 function savedCard(item: SavedItem): HTMLElement {
   const headline = item.kind === 'summary' ? item.headline : item.article.title;
   const badge = item.kind === 'summary'
-    ? el('span', { class: 'src', style: 'color:var(--accent)' }, ['✦ AI Summary'])
+    ? el('span', { class: 'src ai-badge' }, [icon('sparkles', 13), el('span', {}, ['AI Summary'])])
     : el('span', { class: 'src' }, [item.article.sourceName]);
 
   return el('div', { class: 'card' }, [

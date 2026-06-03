@@ -52,7 +52,7 @@ export interface StreamHandlers {
 }
 
 export interface StreamController {
-  /** Disconnect the port — backs the "◼ Stop" control. */
+  /** Disconnect the port — backs the "Stop" control. */
   readonly stop: () => void;
 }
 

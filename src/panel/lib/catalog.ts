@@ -2,18 +2,18 @@
 
 import type { CountryCode, Category, ProviderId, SummaryType } from '../../shared/contracts';
 
-export const COUNTRIES: readonly { code: CountryCode; flag: string; name: string }[] = [
-  { code: 'IN', flag: '🇮🇳', name: 'India' },
-  { code: 'US', flag: '🇺🇸', name: 'United States' },
-  { code: 'GB', flag: '🇬🇧', name: 'United Kingdom' },
-  { code: 'AU', flag: '🇦🇺', name: 'Australia' },
-  { code: 'SG', flag: '🇸🇬', name: 'Singapore' },
-  { code: 'AE', flag: '🇦🇪', name: 'UAE' },
-  { code: 'GLOBAL', flag: '🌍', name: 'Global' },
+export const COUNTRIES: readonly { code: CountryCode; name: string }[] = [
+  { code: 'IN', name: 'India' },
+  { code: 'US', name: 'United States' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'AU', name: 'Australia' },
+  { code: 'SG', name: 'Singapore' },
+  { code: 'AE', name: 'UAE' },
+  { code: 'GLOBAL', name: 'Global' },
 ];
 
-export function country(code: CountryCode): { flag: string; name: string } {
-  return COUNTRIES.find((c) => c.code === code) ?? { flag: '🌍', name: 'Global' };
+export function country(code: CountryCode): { name: string } {
+  return COUNTRIES.find((c) => c.code === code) ?? { name: 'Global' };
 }
 
 export const CATEGORIES: readonly { id: Category; label: string }[] = [
@@ -37,16 +37,16 @@ export const SUMMARY_LENGTHS: readonly { type: SummaryType; label: string }[] = 
   { type: 'keyfacts', label: 'Key Facts (bullets)' },
 ];
 
-interface ProviderInfo { readonly id: ProviderId; readonly glyph: string; readonly name: string; readonly billingUrl: string }
+interface ProviderInfo { readonly id: ProviderId; readonly name: string; readonly billingUrl: string }
 
 export const PROVIDERS: readonly ProviderInfo[] = [
-  { id: 'anthropic', glyph: '◈', name: 'Anthropic', billingUrl: 'https://console.anthropic.com/settings/billing' },
-  { id: 'openai', glyph: '◯', name: 'OpenAI', billingUrl: 'https://platform.openai.com/account/billing' },
-  { id: 'gemini', glyph: '◆', name: 'Gemini', billingUrl: 'https://aistudio.google.com/app/billing' },
-  { id: 'openrouter', glyph: '⊞', name: 'OpenRouter', billingUrl: 'https://openrouter.ai/credits' },
+  { id: 'anthropic', name: 'Anthropic', billingUrl: 'https://console.anthropic.com/settings/billing' },
+  { id: 'openai', name: 'OpenAI', billingUrl: 'https://platform.openai.com/account/billing' },
+  { id: 'gemini', name: 'Gemini', billingUrl: 'https://aistudio.google.com/app/billing' },
+  { id: 'openrouter', name: 'OpenRouter', billingUrl: 'https://openrouter.ai/credits' },
 ];
 
-const FALLBACK_PROVIDER: ProviderInfo = PROVIDERS[0] ?? { id: 'anthropic', glyph: '◈', name: 'Anthropic', billingUrl: 'https://console.anthropic.com/settings/billing' };
+const FALLBACK_PROVIDER: ProviderInfo = PROVIDERS[0] ?? { id: 'anthropic', name: 'Anthropic', billingUrl: 'https://console.anthropic.com/settings/billing' };
 
 export function provider(id: ProviderId): ProviderInfo {
   return PROVIDERS.find((p) => p.id === id) ?? FALLBACK_PROVIDER;

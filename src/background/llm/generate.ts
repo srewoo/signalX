@@ -7,7 +7,7 @@ import type {
   SummarySections,
   SummaryType,
 } from '../../shared/contracts';
-import { err, ok } from '../result';
+import { appError, err, ok } from '../result';
 import { streamWithRetry } from './client';
 import { estCostUsd } from './cost';
 import { parseComparison, parseSummarySections, progressiveWhatHappened } from './parse';
@@ -29,6 +29,7 @@ export async function generateSummary(
   type: SummaryType,
   settings: ProviderSettings,
   onWhatHappened: WhatHappenedListener,
+  signal?: AbortSignal,
 ): Promise<Result<Summary>> {
   const cached = await readSummaryCache(cluster.id, type, settings.model);
   if (cached) {
@@ -40,15 +41,27 @@ export async function generateSummary(
   const started = Date.now();
   let raw = '';
   let lastEmitted = '';
-  const res = await streamWithRetry(settings, system, user, SUMMARY_MAX_TOKENS, (chunk) => {
-    raw += chunk;
-    const wh = progressiveWhatHappened(raw);
-    if (wh && wh !== lastEmitted) {
-      lastEmitted = wh;
-      onWhatHappened(wh);
-    }
-  });
+  const res = await streamWithRetry(
+    settings,
+    system,
+    user,
+    SUMMARY_MAX_TOKENS,
+    (chunk) => {
+      raw += chunk;
+      const wh = progressiveWhatHappened(raw);
+      if (wh && wh !== lastEmitted) {
+        lastEmitted = wh;
+        onWhatHappened(wh);
+      }
+    },
+    signal,
+  );
   if (!res.ok) return err(res.error);
+
+  // Aborted by the user mid-stream: never cache a truncated/partial summary.
+  // The caller (stream.ts) drops this result without posting, so the message
+  // is a guard-rail only and never reaches the user.
+  if (signal?.aborted) return err(appError('INTERNAL', 'Cancelled.'));
 
   const sections: SummarySections = parseSummarySections(res.value.text);
   if (sections.whatHappened && sections.whatHappened !== lastEmitted) {

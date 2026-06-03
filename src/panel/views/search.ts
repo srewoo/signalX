@@ -1,10 +1,11 @@
 /**
  * Search (prototype screen 10): debounced query, pinned AI Overview card that is
- * key-gated (dashed "Add key →" when no provider), result cards, skeletons,
+ * key-gated (dashed "Add key" link when no provider), result cards, skeletons,
  * empty + error states. Search itself works keyless.
  */
 
 import { el, render } from '../lib/dom';
+import { icon } from '../lib/icons';
 import { topbar } from '../components/chrome';
 import { storyCard } from '../components/storyCard';
 import { skelCards } from '../components/skeletons';
@@ -44,9 +45,9 @@ export function renderSearch(root: HTMLElement, ctx: AppContext, initialQuery = 
     bar.className = 'search-input';
     input.focus();
     showIdle(content);
-  } }, ['✕']);
+  } }, [icon('x', 16)]);
 
-  const bar = el('div', { class: initialQuery ? 'search-input active' : 'search-input' }, ['🔍', input, clearBtn]);
+  const bar = el('div', { class: initialQuery ? 'search-input active' : 'search-input' }, [icon('search', 16), input, clearBtn]);
 
   render(root, topbar('SignalX', 'search'), el('div', { class: 'searchbar' }, [bar]), content);
 
@@ -90,19 +91,19 @@ async function run(content: HTMLElement, ctx: AppContext, query: string): Promis
 function aiOverviewCard(ctx: AppContext, query: string, count: number): HTMLElement {
   if (!ctx.hasProvider) {
     return el('div', { class: 'card dashed' }, [
-      el('div', { class: 'meta' }, [el('span', { class: 'src', style: 'color:var(--ink-3)' }, ['✦ AI Overview'])]),
+      el('div', { class: 'meta' }, [el('span', { class: 'src ai-overview muted' }, [icon('sparkles', 13), el('span', {}, ['AI Overview'])])]),
       el('p', { class: 'hint' }, [
         count > 0
           ? `Add your AI key in Settings to get an instant overview of all ${count} results.`
           : 'Add your AI key in Settings to get an instant overview of your results.',
       ]),
       el('div', { class: 'sources-row' }, [
-        el('button', { class: 'summarize-link', onClick: () => navigate({ view: 'settings' }) }, ['Add key →']),
+        el('button', { class: 'summarize-link', onClick: () => navigate({ view: 'settings' }) }, [el('span', {}, ['Add key']), icon('chevron-right', 14)]),
       ]),
     ]);
   }
   return el('div', { class: 'card' }, [
-    el('div', { class: 'meta' }, [el('span', { class: 'src', style: 'color:var(--accent)' }, ['✦ AI Overview'])]),
+    el('div', { class: 'meta' }, [el('span', { class: 'src ai-overview' }, [icon('sparkles', 13), el('span', {}, ['AI Overview'])])]),
     el('p', { class: 'hint' }, [`AI overview of "${query}" is available — open a story to generate a summary.`]),
   ]);
 }

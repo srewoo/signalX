@@ -4,6 +4,17 @@ import { local, readRaw, writeRaw } from './area';
  * AES-GCM encryption for the BYOK API key. The symmetric key is generated once
  * per install (random 256-bit) and persisted to chrome.storage.local. It never
  * leaves the device and is never synced. The plaintext key is never logged.
+ *
+ * THREAT MODEL (be honest about what this does and does not protect):
+ * The AES-GCM key lives in chrome.storage.local right beside the ciphertext.
+ * Anyone (or any code) that can read storage.local can read both and decrypt
+ * trivially. So this encryption protects against:
+ *   - accidental sync leakage (key is never written to storage.sync), and
+ *   - casual/at-rest dumps where the key isn't co-read with the ciphertext.
+ * It does NOT protect against a local attacker, malicious extension with
+ * storage access, or anyone who can read storage.local — there is no secret
+ * outside the device to derive a key from in an extension. It is obfuscation +
+ * sync-leak prevention, not real key-management security.
  */
 
 const SECRET_KEY = '__signalx_enc_secret_v1';

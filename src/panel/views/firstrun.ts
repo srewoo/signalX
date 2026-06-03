@@ -1,10 +1,11 @@
 /**
  * First run (prototype screen 14). Shown when no provider is configured and the
- * user hasn't skipped this session. "Add your AI key" → Settings; "Skip" persists
+ * user hasn't skipped this session. "Add your AI key" opens Settings; "Skip" persists
  * a session flag so feeds/search load keyless.
  */
 
 import { el, render } from '../lib/dom';
+import { icon } from '../lib/icons';
 import { topbar } from '../components/chrome';
 import { navigate } from '../router';
 
@@ -28,7 +29,7 @@ function markSkipped(): void {
 
 export function renderFirstRun(root: HTMLElement): void {
   const content = el('div', { class: 'content centered' }, [
-    el('div', { class: 'firstrun-mark' }, ['✦']),
+    el('div', { class: 'firstrun-mark' }, [icon('sparkles', 30)]),
     el('h3', { class: 'firstrun-h' }, ['News, distilled.']),
     el('p', { class: 'firstrun-p' }, [
       'Headlines and search are free — no account, no key. Add your own AI key to unlock summaries and source comparison.',

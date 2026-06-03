@@ -1,19 +1,20 @@
 /** Shared header chrome: top bar with logo + nav rail, and the back row. */
 
 import { el } from '../lib/dom';
+import { icon, type IconName } from '../lib/icons';
 import { navigate, type NavTab } from '../router';
 
 interface NavItem {
   readonly tab: NavTab;
-  readonly glyph: string;
+  readonly glyph: IconName;
   readonly label: string;
 }
 
 const NAV: readonly NavItem[] = [
-  { tab: 'feed', glyph: '⌂', label: 'Feed' },
-  { tab: 'search', glyph: '🔍', label: 'Search' },
-  { tab: 'saved', glyph: '🔖', label: 'Saved' },
-  { tab: 'settings', glyph: '⚙', label: 'Settings' },
+  { tab: 'feed', glyph: 'home', label: 'Feed' },
+  { tab: 'search', glyph: 'search', label: 'Search' },
+  { tab: 'saved', glyph: 'bookmark', label: 'Saved' },
+  { tab: 'settings', glyph: 'settings', label: 'Settings' },
 ];
 
 function navRail(active: NavTab | null): HTMLElement {
@@ -26,7 +27,7 @@ function navRail(active: NavTab | null): HTMLElement {
         'aria-pressed': item.tab === active,
         onClick: () => navigate({ view: item.tab }),
       },
-      [item.glyph],
+      [icon(item.glyph, 18)],
     ),
   );
   return el('nav', { class: 'nav-rail', 'aria-label': 'Primary' }, buttons);
@@ -45,13 +46,16 @@ export function topbar(title: string, active: NavTab | null): HTMLElement {
 /** Top bar variant with a Back control and optional trailing actions (detail views). */
 export function backbar(label: string, onBack: () => void, ...actions: readonly HTMLElement[]): HTMLElement {
   return el('header', { class: 'topbar' }, [
-    el('button', { class: 'back-row', 'aria-label': `Back to ${label}`, onClick: onBack }, [`‹ ${label}`]),
+    el('button', { class: 'back-row', 'aria-label': `Back to ${label}`, onClick: onBack }, [
+      icon('chevron-left', 18),
+      el('span', {}, [label]),
+    ]),
     el('div', { class: 'spacer' }),
     ...actions,
   ]);
 }
 
 /** A trailing icon button for back bars (bookmark, share, stop, etc.). */
-export function iconAction(glyph: string, label: string, onClick: () => void, extraClass = 'nav-ico'): HTMLButtonElement {
-  return el('button', { class: extraClass, 'aria-label': label, title: label, onClick }, [glyph]);
+export function iconAction(name: IconName, label: string, onClick: () => void, extraClass = 'nav-ico'): HTMLButtonElement {
+  return el('button', { class: extraClass, 'aria-label': label, title: label, onClick }, [icon(name, 18)]);
 }
