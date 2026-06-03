@@ -66,6 +66,12 @@ function applyFormAttrs(node: HTMLElement, attrs: ElAttrs): void {
     if (attrs.placeholder !== undefined) node.placeholder = attrs.placeholder;
     if (attrs.readonly !== undefined) node.readOnly = attrs.readonly;
   }
+  // <option> needs its value set as a property too — without this, options fall
+  // back to their text content as value, so select.value never matches enum
+  // codes ('IN', 'short') and preference selects render blank and fail to save.
+  if (node instanceof HTMLOptionElement && attrs.value !== undefined) {
+    node.value = attrs.value;
+  }
   if (node instanceof HTMLAnchorElement && attrs.href !== undefined) node.href = attrs.href;
   if (
     (node instanceof HTMLButtonElement ||
