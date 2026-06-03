@@ -80,18 +80,20 @@ function providerGrid(content: HTMLElement, ctx: AppContext, prefs: Preferences,
 
 function keyField(content: HTMLElement, ctx: AppContext, prefs: Preferences, draft: Draft): HTMLElement {
   let status = statusEl(draft);
+  const test = el('button', { class: 'act-btn', disabled: !draft.apiKey, onClick: () => void runTest(content, ctx, prefs, draft) }, ['Test key']);
   const input = el('input', {
     class: 'input', type: 'password', value: draft.apiKey, placeholder: 'Paste your API key', 'aria-label': 'API key',
     onInput: (e) => {
       draft.apiKey = (e.currentTarget as HTMLInputElement).value;
       draft.keyState = 'unknown';
+      // Keep the Test button's enabled state in sync with the typed key —
+      // it was previously frozen at initial-render time (dead button bug).
+      test.disabled = draft.apiKey.length === 0;
       const next = statusEl(draft);
       status.replaceWith(next);
       status = next;
     },
   });
-
-  const test = el('button', { class: 'act-btn', disabled: !draft.apiKey, onClick: () => void runTest(content, ctx, prefs, draft) }, ['Test key']);
 
   return el('div', { class: 'field' }, [
     el('label', {}, ['API Key']),
@@ -129,7 +131,17 @@ function modelField(draft: Draft): HTMLElement {
   );
   const select = el('select', { class: 'select', 'aria-label': 'Model' }, options);
   select.value = draft.model;
-  select.addEventListener('change', () => { draft.model = select.value; });
+  select.addEventListener('change', () => {
+    draft.model = select.value;
+    // Auto-save: if the key is already verified, persist the model change
+    // immediately — switching model must not require re-testing the key.
+    if (draft.keyState === 'valid') {
+      void send({
+        type: 'settings/setProvider',
+        settings: { provider: draft.provider, apiKey: draft.apiKey, model: draft.model },
+      });
+    }
+  });
   return el('div', { class: 'field' }, [el('label', {}, ['Model']), select]);
 }
 
