@@ -93,14 +93,15 @@ function folderRow(root: HTMLElement, content: HTMLElement, f: Folder, itemCount
     const msg = itemCount > 0
       ? `Delete "${f.name}" and its ${itemCount} saved item${itemCount === 1 ? '' : 's'}?`
       : `Delete "${f.name}"?`;
-    const confirm = el('button', { class: 'act-btn danger', onClick: async () => {
+    const onConfirm = async (): Promise<void> => {
       const res = await send({ type: 'bookmarks/removeFolder', folderId: f.id });
       if (res.ok) {
         void loadRoot(root, content); // refresh counts + recent list
         return;
       }
       setText(warn, res.error.message);
-    } }, ['Delete']);
+    };
+    const confirm = el('button', { class: 'act-btn danger', onClick: () => void onConfirm() }, ['Delete']);
     const cancel = el('button', { class: 'act-btn', onClick: () => {
       row.replaceChildren(open, del);
     } }, ['Cancel']);
@@ -156,22 +157,23 @@ function savedCard(item: SavedItem): HTMLElement {
   const errorText = el('span', {}, ['']);
   const error = el('div', { class: 'key-status bad', style: 'display:none; margin-top:8px;', role: 'alert' }, [icon('x', 14), errorText]);
 
+  const onRemove = async (): Promise<void> => {
+    remove.disabled = true;
+    error.style.display = 'none';
+    const res = await send({ type: 'bookmarks/remove', id: item.id });
+    if (res.ok) {
+      card.remove();
+      return;
+    }
+    remove.disabled = false;
+    setText(errorText, res.error.message);
+    error.style.display = '';
+  };
   const remove = el('button', {
     class: 'row-remove',
     'aria-label': `Remove "${headline}" from saved`,
     title: 'Remove',
-    onClick: async () => {
-      remove.disabled = true;
-      error.style.display = 'none';
-      const res = await send({ type: 'bookmarks/remove', id: item.id });
-      if (res.ok) {
-        card.remove();
-        return;
-      }
-      remove.disabled = false;
-      setText(errorText, res.error.message);
-      error.style.display = '';
-    },
+    onClick: () => void onRemove(),
   }, [icon('trash', 16)]);
 
   const card = el('div', { class: 'card saved-card' }, [

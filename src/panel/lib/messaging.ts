@@ -35,7 +35,7 @@ const TRANSPORT_ERROR: AppError = {
  */
 export async function send<R extends Request>(req: R): Promise<Result<ResponseFor<R>>> {
   try {
-    const res = (await chrome.runtime.sendMessage(req)) as Result<ResponseFor<R>> | undefined;
+    const res: Result<ResponseFor<R>> | undefined = await chrome.runtime.sendMessage(req);
     if (!res || typeof res !== 'object' || !('ok' in res)) {
       return { ok: false, error: TRANSPORT_ERROR };
     }

@@ -1,6 +1,7 @@
 import type { Article } from '../../shared/contracts';
 import { stableHash } from '../hash';
 import { log } from '../logger';
+import { canonicalizeUrl, isGoogleNewsRedirect, unwrapGoogleNewsLink } from './canonical';
 
 /**
  * Defensive RSS/Atom parsing WITHOUT DOMParser (unavailable in MV3 service
@@ -93,8 +94,16 @@ export function parseFeed(
     if (!rawTitle || !rawLink) continue;
 
     let title = decodeEntities(rawTitle);
-    const url = decodeEntities(rawLink);
+    let url = decodeEntities(rawLink);
     if (!title || !/^https?:\/\//i.test(url)) continue;
+
+    const rawDesc = tagContent(block, 'description') ?? tagContent(block, 'summary');
+    // Google News links are redirects; swap in the real publisher URL when the
+    // description anchor exposes one (best-effort — see canonical.ts).
+    if (isGoogleNewsRedirect(url)) {
+      const real = unwrapGoogleNewsLink(rawDesc);
+      if (real) url = real;
+    }
 
     let displayName = sourceName;
     const dashIdx = title.lastIndexOf(' - ');
@@ -107,13 +116,14 @@ export function parseFeed(
       parseDate(tagContent(block, 'pubDate')) ??
       parseDate(tagContent(block, 'published')) ??
       parseDate(tagContent(block, 'updated')) ??
+      parseDate(tagContent(block, 'dc:date')) ?? // RDF/RSS 1.0 (e.g. DW)
       new Date().toISOString();
 
-    const rawSnippet = tagContent(block, 'description') ?? tagContent(block, 'summary');
-    const snippet = rawSnippet ? decodeEntities(rawSnippet).slice(0, 280) : '';
+    const snippet = rawDesc ? decodeEntities(rawDesc).slice(0, 280) : '';
 
     out.push({
-      id: stableHash(url),
+      // Hash the canonical form so tracking-param variants dedup to one id.
+      id: stableHash(canonicalizeUrl(url)),
       title,
       url,
       sourceId,

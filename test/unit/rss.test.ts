@@ -147,6 +147,38 @@ describe('parseFeed', () => {
     expect(a[0]!.id.length).toBeGreaterThan(0);
   });
 
+  it('should unwrap a Google News redirect link when the description anchor exposes the publisher url', () => {
+    const xml = `<rss><channel><item>
+      <title>Markets rally - Reuters</title>
+      <link>https://news.google.com/rss/articles/CBMiABC?oc=5</link>
+      <description>&amp;lt;a href="https://www.reuters.com/markets/rally" target="_blank"&amp;gt;Markets rally&amp;lt;/a&amp;gt;</description>
+    </item></channel></rss>`;
+    const out = parseFeed(xml, 'reuters', 'Reuters');
+    expect(out[0]!.url).toBe('https://www.reuters.com/markets/rally');
+  });
+
+  it('should keep the Google News link when the description has no publisher url', () => {
+    const xml = `<rss><channel><item>
+      <title>Story - Reuters</title>
+      <link>https://news.google.com/rss/articles/CBMiABC?oc=5</link>
+      <description>&amp;lt;a href="https://news.google.com/rss/articles/CBMiABC?oc=5"&amp;gt;Story&amp;lt;/a&amp;gt;</description>
+    </item></channel></rss>`;
+    const out = parseFeed(xml, 'reuters', 'Reuters');
+    expect(out[0]!.url).toBe('https://news.google.com/rss/articles/CBMiABC?oc=5');
+  });
+
+  it('should derive the same id for tracking-param variants of the same article url', () => {
+    const make = (link: string) =>
+      parseFeed(
+        `<rss><channel><item><title>Same story</title><link>${link}</link></item></channel></rss>`,
+        'src',
+        'Source',
+      );
+    const a = make('https://example.com/story?utm_source=rss&amp;utm_medium=feed');
+    const b = make('http://example.com/story/');
+    expect(a[0]!.id).toBe(b[0]!.id);
+  });
+
   it('should omit snippet when no description or summary present', () => {
     const xml = `<rss><channel><item>
       <title>No snippet</title><link>https://example.com/ns</link>

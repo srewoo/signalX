@@ -1,11 +1,27 @@
 import type { Category, CountryCode } from '../../shared/contracts';
+import {
+  ABC_AU_CATEGORY,
+  ALJAZEERA_CATEGORY,
+  BBC_CATEGORY,
+  CNA_CATEGORY,
+  DW_CATEGORY,
+  GUARDIAN_CATEGORY,
+  HINDU_CATEGORY,
+  HT_CATEGORY,
+  IE_CATEGORY,
+  NDTV_CATEGORY,
+  NYT_CATEGORY,
+  SMH_CATEGORY,
+  ST_CATEGORY,
+  TOI_FEED_IDS,
+  WSJ_CATEGORY,
+} from './nativeFeeds';
 
 /**
- * Feed registry. Each source produces an RSS/Atom URL for a given country +
- * category. Some publishers expose stable per-category RSS paths (BBC, Times of
- * India); for the rest we build a Google News RSS query scoped to BOTH the
- * publisher domain AND a category search term so the result is genuinely
- * category-specific.
+ * Feed registry. Native publisher RSS wherever a stable feed exists (see
+ * nativeFeeds.ts — all URLs verified live); the Google News site:-scoped query
+ * only where no native feed is possible (CNN: rss.cnn.com TLS is broken;
+ * Reuters: discontinued public RSS in 2020) or for the odd missing category.
  *
  * HARD RULE: a category feed must NEVER silently fall back to a source's
  * top/home feed. If a source has no category-specific feed for the requested
@@ -16,6 +32,8 @@ import type { Category, CountryCode } from '../../shared/contracts';
 export interface FeedSource {
   readonly sourceId: string;
   readonly sourceName: string;
+  /** Countries this source is offered for; 'all' = every country incl. GLOBAL. */
+  readonly countries: 'all' | readonly CountryCode[];
   /** Returns an RSS/Atom URL, or null if this source has no feed for the combo. */
   readonly url: (country: CountryCode, category: Category) => string | null;
 }
@@ -58,8 +76,7 @@ function localeParams(country: CountryCode): URLSearchParams {
  * - `top` + no domain → the country's general top feed (the ONE allowed
  *   "home feed" case, used only by the dedicated top-feed source).
  * - any other category → a `site:<domain> <term>` search, so the feed is both
- *   publisher- and category-specific. Returns null if the category has no term
- *   (only `top`), which keeps the never-fall-back-to-home invariant.
+ *   publisher- and category-specific.
  */
 function googleNews(
   country: CountryCode,
@@ -69,14 +86,12 @@ function googleNews(
   const term = CATEGORY_TERMS[category];
   if (category === 'top') {
     if (siteDomain) {
-      // A publisher "top" via Google News: scope to the domain only.
       const search = localeParams(country);
       search.set('q', `site:${siteDomain}`);
       return `${GOOGLE_NEWS}/search?${search.toString()}`;
     }
     return `${GOOGLE_NEWS}?${localeParams(country).toString()}`;
   }
-  // Non-top category: a term is guaranteed by CATEGORY_TERMS.
   const queryParts = [term];
   if (siteDomain) queryParts.push(`site:${siteDomain}`);
   const search = localeParams(country);
@@ -91,84 +106,144 @@ export function googleNewsSearch(query: string, country: CountryCode): string {
   return `${GOOGLE_NEWS}/search?${params.toString()}`;
 }
 
-/**
- * BBC native RSS paths. Sport lives under a different root (/sport/rss.xml),
- * everything else under /news/<section>/rss.xml. `world` maps to the world
- * section. Categories absent here (none currently) resolve to null, not top.
- */
-const BBC_CATEGORY: Partial<Record<Category, string>> = {
-  top: 'https://feeds.bbci.co.uk/news/rss.xml',
-  tech: 'https://feeds.bbci.co.uk/news/technology/rss.xml',
-  business: 'https://feeds.bbci.co.uk/news/business/rss.xml',
-  politics: 'https://feeds.bbci.co.uk/news/politics/rss.xml',
-  world: 'https://feeds.bbci.co.uk/news/world/rss.xml',
-  sports: 'https://feeds.bbci.co.uk/sport/rss.xml',
-};
-
-/**
- * Times of India native RSS feed ids (timesofindia.indiatimes.com/rssfeeds/<id>.cms).
- * Known-stable section ids only; categories without a stable id are omitted so
- * TOI is dropped for them rather than serving its top feed.
- */
-const TOI_FEED_IDS: Partial<Record<Category, string>> = {
-  top: '1221656',        // Top Stories
-  tech: '66949542',      // Technology / Gadgets
-  business: '1898055',   // Business
-  sports: '4719148',     // Sports
-  world: '296589292',    // World
-  // politics: omitted — no stable standalone TOI politics feed id.
-};
-
 function toiUrl(category: Category): string | null {
   const id = TOI_FEED_IDS[category];
   return id ? `https://timesofindia.indiatimes.com/rssfeeds/${id}.cms` : null;
 }
 
+/** The Guardian's `top` is edition-specific; category paths are shared. */
+const GUARDIAN_TOP: Partial<Record<CountryCode, string>> = {
+  GB: 'https://www.theguardian.com/uk/rss',
+  AU: 'https://www.theguardian.com/au/rss',
+};
+
+function guardianUrl(country: CountryCode, category: Category): string | null {
+  if (category === 'top') {
+    return GUARDIAN_TOP[country] ?? 'https://www.theguardian.com/world/rss';
+  }
+  return GUARDIAN_CATEGORY[category] ?? null;
+}
+
 export const SOURCES: readonly FeedSource[] = [
+  // ── Global wires/broadcasters (every country) ──
   {
     sourceId: 'bbc',
     sourceName: 'BBC',
-    // No fallback to top: unknown category → null (source dropped for that combo).
+    countries: 'all',
     url: (_country, category) => BBC_CATEGORY[category] ?? null,
   },
   {
     sourceId: 'cnn',
     sourceName: 'CNN',
+    countries: 'all',
+    // rss.cnn.com serves only plain http (TLS broken — verified 2026-06), so
+    // CNN stays on the Google News proxy until CNN fixes its RSS host.
     url: (country, category) => googleNews(country, category, 'cnn.com'),
   },
   {
     sourceId: 'reuters',
     sourceName: 'Reuters',
+    countries: 'all',
+    // Reuters discontinued public RSS in 2020 — Google News proxy is the only
+    // keyless option.
     url: (country, category) => googleNews(country, category, 'reuters.com'),
   },
   {
+    sourceId: 'aljazeera',
+    sourceName: 'Al Jazeera',
+    countries: 'all',
+    url: (_country, category) => ALJAZEERA_CATEGORY[category] ?? null,
+  },
+  {
+    sourceId: 'dw',
+    sourceName: 'DW',
+    countries: 'all',
+    url: (_country, category) => DW_CATEGORY[category] ?? null,
+  },
+  // ── US ──
+  {
+    sourceId: 'nyt',
+    sourceName: 'The New York Times',
+    countries: ['US', 'GLOBAL'],
+    url: (_country, category) => NYT_CATEGORY[category] ?? null,
+  },
+  {
+    sourceId: 'wsj',
+    sourceName: 'The Wall Street Journal',
+    countries: ['US', 'GLOBAL'],
+    url: (_country, category) => WSJ_CATEGORY[category] ?? null,
+  },
+  // ── UK + AU (Guardian runs dedicated editions for both) ──
+  {
+    sourceId: 'guardian',
+    sourceName: 'The Guardian',
+    countries: ['GB', 'AU', 'GLOBAL'],
+    url: guardianUrl,
+  },
+  // ── Australia ──
+  {
+    sourceId: 'abcau',
+    sourceName: 'ABC News (AU)',
+    countries: ['AU'],
+    url: (_country, category) => ABC_AU_CATEGORY[category] ?? null,
+  },
+  {
+    sourceId: 'smh',
+    sourceName: 'Sydney Morning Herald',
+    countries: ['AU'],
+    url: (_country, category) => SMH_CATEGORY[category] ?? null,
+  },
+  // ── India ──
+  {
     sourceId: 'toi',
     sourceName: 'Times of India',
-    // Native TOI RSS where a stable section id exists; null otherwise.
+    countries: ['IN'],
     url: (_country, category) => toiUrl(category),
   },
   {
     sourceId: 'ht',
     sourceName: 'Hindustan Times',
-    // No reliably-stable per-category RSS paths → Google News scoped by site + term.
-    url: (country, category) => googleNews(country, category, 'hindustantimes.com'),
+    countries: ['IN'],
+    url: (country, category) =>
+      HT_CATEGORY[category] ?? googleNews(country, category, 'hindustantimes.com'),
   },
   {
     sourceId: 'thehindu',
     sourceName: 'The Hindu',
-    url: (country, category) => googleNews(country, category, 'thehindu.com'),
+    countries: ['IN'],
+    url: (country, category) =>
+      HINDU_CATEGORY[category] ?? googleNews(country, category, 'thehindu.com'),
   },
   {
     sourceId: 'ie',
     sourceName: 'Indian Express',
-    url: (country, category) => googleNews(country, category, 'indianexpress.com'),
+    countries: ['IN'],
+    url: (_country, category) => IE_CATEGORY[category] ?? null,
+  },
+  {
+    sourceId: 'ndtv',
+    sourceName: 'NDTV',
+    countries: ['IN'],
+    url: (_country, category) => NDTV_CATEGORY[category] ?? null,
+  },
+  // ── Singapore ──
+  {
+    sourceId: 'cna',
+    sourceName: 'CNA',
+    countries: ['SG'],
+    url: (_country, category) => CNA_CATEGORY[category] ?? null,
+  },
+  {
+    sourceId: 'straitstimes',
+    sourceName: 'The Straits Times',
+    countries: ['SG'],
+    url: (_country, category) => ST_CATEGORY[category] ?? null,
   },
 ];
 
-const INDIA_ONLY = new Set(['toi', 'ht', 'thehindu', 'ie']);
-
-/** Sources relevant to a country: drop India-only outlets for non-IN feeds. */
+/** Sources relevant to a country: global sources plus that country's locals. */
 export function sourcesFor(country: CountryCode): readonly FeedSource[] {
-  if (country === 'IN') return SOURCES;
-  return SOURCES.filter((s) => !INDIA_ONLY.has(s.sourceId));
+  return SOURCES.filter(
+    (s) => s.countries === 'all' || s.countries.includes(country),
+  );
 }

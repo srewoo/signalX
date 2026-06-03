@@ -1,18 +1,23 @@
 {
   "name": "signalx",
-  "version": "1.0.0",
+  "version": "1.1",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src test eslint.config.js vite.config.ts vitest.config.ts",
+    "check": "npm run typecheck && npm run lint && npm run test",
     "test": "vitest run",
     "test:watch": "vitest",
-    "zip": "npm run build && rm -f signalx-v1.0.0.zip && cd dist && zip -r ../signalx-v1.0.0.zip . -x '.*'"
+    "zip": "npm run build && rm -f signalx-v1.1.zip && cd dist && zip -r ../signalx-v1.1.zip . -x '.*'"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/chrome": "^0.0.270",
+    "eslint": "^9.39.4",
     "typescript": "^5.5.0",
+    "typescript-eslint": "^8.60.1",
     "vite": "^5.4.0",
     "vitest": "^2.0.0"
   },
