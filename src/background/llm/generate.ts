@@ -1,0 +1,82 @@
+import type {
+  ProviderSettings,
+  Result,
+  SourceComparison,
+  StoryCluster,
+  Summary,
+  SummarySections,
+  SummaryType,
+} from '../../shared/contracts';
+import { err, ok } from '../result';
+import { streamWithRetry } from './client';
+import { estCostUsd } from './cost';
+import { parseComparison, parseSummarySections, progressiveWhatHappened } from './parse';
+import { buildComparePrompt, buildSummaryPrompt } from './prompts';
+import { readSummaryCache, writeSummaryCache } from './summaryCache';
+
+const SUMMARY_MAX_TOKENS = 1200;
+const COMPARE_MAX_TOKENS = 1400;
+
+/** Callback for live "whatHappened" progress during summary streaming. */
+export type WhatHappenedListener = (text: string) => void;
+
+/**
+ * Generate a summary (cache-first). On a stream, emits progressive
+ * "whatHappened" text via onWhatHappened. Returns a fully parsed Summary.
+ */
+export async function generateSummary(
+  cluster: StoryCluster,
+  type: SummaryType,
+  settings: ProviderSettings,
+  onWhatHappened: WhatHappenedListener,
+): Promise<Result<Summary>> {
+  const cached = await readSummaryCache(cluster.id, type, settings.model);
+  if (cached) {
+    onWhatHappened(cached.sections.whatHappened);
+    return ok(cached);
+  }
+
+  const { system, user } = buildSummaryPrompt(cluster, type);
+  const started = Date.now();
+  let raw = '';
+  let lastEmitted = '';
+  const res = await streamWithRetry(settings, system, user, SUMMARY_MAX_TOKENS, (chunk) => {
+    raw += chunk;
+    const wh = progressiveWhatHappened(raw);
+    if (wh && wh !== lastEmitted) {
+      lastEmitted = wh;
+      onWhatHappened(wh);
+    }
+  });
+  if (!res.ok) return err(res.error);
+
+  const sections: SummarySections = parseSummarySections(res.value.text);
+  if (sections.whatHappened && sections.whatHappened !== lastEmitted) {
+    onWhatHappened(sections.whatHappened);
+  }
+  const summary: Summary = {
+    clusterId: cluster.id,
+    type,
+    sections,
+    model: settings.model,
+    latencyMs: Date.now() - started,
+    estCostUsd: estCostUsd(settings.provider, settings.model, system + user, res.value.text),
+    cached: false,
+    generatedAt: new Date().toISOString(),
+  };
+  await writeSummaryCache(summary);
+  return ok(summary);
+}
+
+/** Generate a source comparison (non-streamed; returns parsed result). */
+export async function generateComparison(
+  cluster: StoryCluster,
+  settings: ProviderSettings,
+): Promise<Result<SourceComparison>> {
+  const { system, user } = buildComparePrompt(cluster);
+  const res = await streamWithRetry(settings, system, user, COMPARE_MAX_TOKENS, () => {
+    /* comparison is not streamed to the UI */
+  });
+  if (!res.ok) return err(res.error);
+  return ok(parseComparison(res.value.text, cluster.id));
+}

@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "SignalX",
+  "version": "1.0.0",
+  "description": "Multi-source news aggregation with BYOK AI summaries and source comparison.",
+  "minimum_chrome_version": "114",
+  "permissions": ["sidePanel", "storage", "tabs"],
+  "host_permissions": [
+    "https://feeds.bbci.co.uk/*",
+    "https://rss.cnn.com/*",
+    "https://news.google.com/*",
+    "https://timesofindia.indiatimes.com/*",
+    "https://www.hindustantimes.com/*",
+    "https://www.thehindu.com/*",
+    "https://indianexpress.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://openrouter.ai/*"
+  ],
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "src/panel/panel.html"
+  },
+  "action": {
+    "default_title": "Open SignalX"
+  },
+  "icons": {}
+}
