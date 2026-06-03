@@ -24,17 +24,21 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // Open the side panel for the clicked tab only (per-tab, never global).
+// IMPORTANT: sidePanel.open() must run synchronously inside the user-gesture
+// context — awaiting setOptions() first crosses a microtask boundary, drops the
+// gesture token, and open() rejects silently. Issue both calls without awaiting
+// in between; Chrome processes them in order.
 chrome.action.onClicked.addListener((tab) => {
   if (tab.id === undefined) return;
   const tabId = tab.id;
-  void (async () => {
-    try {
-      await chrome.sidePanel.setOptions({ tabId, path: PANEL_PATH, enabled: true });
-      await chrome.sidePanel.open({ tabId });
-    } catch (e) {
-      log.error('failed to open side panel', { reason: e instanceof Error ? e.name : 'unknown' });
-    }
-  })();
+  void chrome.sidePanel
+    .setOptions({ tabId, path: PANEL_PATH, enabled: true })
+    .catch((e: unknown) => {
+      log.error('setOptions failed', { reason: e instanceof Error ? e.name : 'unknown' });
+    });
+  chrome.sidePanel.open({ tabId }).catch((e: unknown) => {
+    log.error('failed to open side panel', { reason: e instanceof Error ? e.name : 'unknown' });
+  });
 });
 
 // Typed request router. Always responds with a Result<T>; never throws across
