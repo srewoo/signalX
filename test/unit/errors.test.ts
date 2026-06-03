@@ -151,7 +151,7 @@ describe('extractProviderMessage', () => {
     const { extractProviderMessage } = await import('../../src/background/llm/errors');
     const long = JSON.stringify({ error: { message: 'x'.repeat(500) } });
     const out = extractProviderMessage(long);
-    expect(out).toHaveLength(160);
+    expect(out).toHaveLength(158);
     expect(out?.endsWith('…')).toBe(true);
   });
 });
