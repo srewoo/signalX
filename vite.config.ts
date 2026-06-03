@@ -23,7 +23,9 @@ function manifestPlugin(): Plugin {
           break;
         }
       }
-      const raw = readFileSync(resolve(root, 'manifest.json'), 'utf8');
+      // Source manifest is deliberately named manifest.src.json so the repo root
+      // can never be mistaken for a loadable extension — only dist/ is loadable.
+      const raw = readFileSync(resolve(root, 'manifest.src.json'), 'utf8');
       const manifest = JSON.parse(raw) as {
         background: { service_worker: string; type: string };
         side_panel: { default_path: string };
