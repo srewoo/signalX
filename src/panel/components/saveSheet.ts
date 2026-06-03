@@ -20,31 +20,50 @@ export async function openSaveSheet(buildItem: (folderId: string) => SavedItem):
   const bodyHost = el('div', {});
   const handle = openSheet('Save summary to…', [bodyHost]);
 
+  // Open straight into "new folder" mode when no folders exist yet.
   let selectedId: string | undefined = folders[0]?.id;
-  let creating = false;
+  let creating = folders.length === 0;
+  let pendingName = '';
+  let errorMsg = '';
 
+  /** Create the typed folder (if any), then save — one tap, no hidden Enter step. */
   const onSave = async (): Promise<void> => {
-    if (!selectedId) return;
-    await send({ type: 'bookmarks/save', item: buildItem(selectedId) });
-    handle.close();
-  };
-
-  const onCreate = async (name: string): Promise<void> => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const res = await send({ type: 'bookmarks/createFolder', name: trimmed });
-    if (res.ok) {
+    errorMsg = '';
+    let folderId = selectedId;
+    const trimmed = pendingName.trim();
+    if (creating && trimmed) {
+      const res = await send({ type: 'bookmarks/createFolder', name: trimmed });
+      if (!res.ok) {
+        errorMsg = res.error.message;
+        draw();
+        return;
+      }
       folders.push(res.value);
-      selectedId = res.value.id;
+      folderId = res.value.id;
+      selectedId = folderId;
+      creating = false;
+      pendingName = '';
     }
-    creating = false;
-    draw();
+    if (!folderId) {
+      errorMsg = 'Pick a folder or type a new folder name first.';
+      draw();
+      return;
+    }
+    const saved = await send({ type: 'bookmarks/save', item: buildItem(folderId) });
+    if (!saved.ok) {
+      errorMsg = saved.error.message;
+      draw();
+      return;
+    }
+    handle.close();
   };
 
   function draw(): void {
     const rows: HTMLElement[] = folders.map((f) =>
-      optRow(f.name, f.id === selectedId, () => {
+      optRow(f.name, f.id === selectedId && !pendingName.trim(), () => {
         selectedId = f.id;
+        creating = false;
+        pendingName = '';
         draw();
       }, 'folder'),
     );
@@ -52,20 +71,34 @@ export async function openSaveSheet(buildItem: (folderId: string) => SavedItem):
     const newFolderControl = creating
       ? el('input', {
           class: 'input',
-          placeholder: 'Folder name',
+          placeholder: 'New folder name',
+          value: pendingName,
+          'aria-label': 'New folder name',
+          onInput: (e) => {
+            pendingName = (e.currentTarget as HTMLInputElement).value;
+            saveBtn.textContent = saveLabel();
+          },
           onKeyDown: (e) => {
-            if (e.key === 'Enter') void onCreate((e.currentTarget as HTMLInputElement).value);
+            if (e.key === 'Enter') void onSave();
           },
         })
       : el('button', { class: 'new-folder', onClick: () => { creating = true; draw(); } }, [icon('plus', 16), el('span', {}, ['New folder'])]);
+
+    const saveLabel = (): string => (creating && pendingName.trim() ? 'Create folder & save' : 'Save');
+    const saveBtn = el('button', {
+      class: 'act-btn primary',
+      style: 'display:block; width:100%; margin-top:10px; padding:11px 0;',
+      onClick: () => void onSave(),
+    }, [saveLabel()]);
 
     render(
       bodyHost,
       ...rows,
       newFolderControl,
-      el('button', { class: 'act-btn primary', style: 'margin-top:8px; padding:11px 0;', disabled: !selectedId, onClick: () => void onSave() }, ['Save']),
+      errorMsg ? el('div', { class: 'key-status bad', role: 'alert' }, [errorMsg]) : null,
+      saveBtn,
     );
-    if (creating) bodyHost.querySelector('input')?.focus();
+    if (creating && !pendingName) bodyHost.querySelector('input')?.focus();
   }
 
   draw();
