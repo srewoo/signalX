@@ -21,12 +21,18 @@ const DEFAULTS: Record<ProviderId, Price> = {
 };
 
 const MODEL_PRICES: Record<string, Price> = {
-  'claude-3-5-haiku-latest': { inPerM: 0.8, outPerM: 4 },
-  'claude-3-5-sonnet-latest': { inPerM: 3, outPerM: 15 },
-  'gpt-4o-mini': { inPerM: 0.15, outPerM: 0.6 },
-  'gpt-4o': { inPerM: 2.5, outPerM: 10 },
-  'gemini-1.5-flash': { inPerM: 0.075, outPerM: 0.3 },
-  'gemini-1.5-pro': { inPerM: 1.25, outPerM: 5 },
+  'claude-haiku-4-5': { inPerM: 1, outPerM: 5 },
+  'claude-sonnet-4-6': { inPerM: 3, outPerM: 15 },
+  'claude-opus-4-8': { inPerM: 15, outPerM: 75 },
+  'gpt-5-mini': { inPerM: 0.25, outPerM: 2 },
+  'gpt-5.1': { inPerM: 1.25, outPerM: 10 },
+  'gpt-5-nano': { inPerM: 0.05, outPerM: 0.4 },
+  'gemini-2.5-flash': { inPerM: 0.3, outPerM: 2.5 },
+  'gemini-2.5-flash-lite': { inPerM: 0.1, outPerM: 0.4 },
+  'gemini-3-pro-preview': { inPerM: 2, outPerM: 12 },
+  'anthropic/claude-haiku-4.5': { inPerM: 1, outPerM: 5 },
+  'openai/gpt-5-mini': { inPerM: 0.25, outPerM: 2 },
+  'google/gemini-2.5-flash': { inPerM: 0.3, outPerM: 2.5 },
 };
 
 export function estTokens(text: string): number {

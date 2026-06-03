@@ -2,6 +2,11 @@ import type { Result } from '../../../shared/contracts';
 import type { OnDelta, ProviderClient, StreamOptions, StreamSuccess } from '../provider';
 import { readSse, runStream } from '../provider';
 
+/** gpt-5*, o-series and newer require max_completion_tokens (OpenAI endpoint only). */
+function isGpt5Family(model: string): boolean {
+  return /^(gpt-5|o\d)/.test(model);
+}
+
 /** OpenAI Chat Completions client with SSE streaming. */
 function makeClient(endpoint: string, extraHeaders: Readonly<Record<string, string>> = {}): ProviderClient {
   return {
@@ -18,7 +23,12 @@ function makeClient(endpoint: string, extraHeaders: Readonly<Record<string, stri
             },
             body: JSON.stringify({
               model: opts.model,
-              max_tokens: opts.maxTokens,
+              // GPT-5-family models reject the legacy `max_tokens` param and
+              // require `max_completion_tokens`; older models accept it too only
+              // on the OpenAI endpoint, so branch on model family for safety.
+              ...(isGpt5Family(opts.model)
+                ? { max_completion_tokens: opts.maxTokens }
+                : { max_tokens: opts.maxTokens }),
               stream: true,
               messages: [
                 { role: 'system', content: opts.system },
