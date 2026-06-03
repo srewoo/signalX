@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SignalX — Help</title>
+<style>
+  /* Design tokens copied verbatim from src/panel/styles.css so this offline
+     page matches the panel exactly. No remote fonts/links — system font stack
+     fallback is used since Inter Variable isn't shared into a static page. */
+  :root {
+    --bg: #fafafa; --surface: #fff; --ink: #111418; --ink-2: #5c6470; --ink-3: #9aa3af;
+    --line: #e8eaed; --accent: #1a73e8; --accent-soft: #e8f0fe;
+    --green: #1e8e3e; --green-soft: #e6f4ea; --red: #c5221f; --red-soft: #fce8e6;
+    --amber: #b06000; --amber-soft: #fef7e0;
+    --radius: 10px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181c; --surface: #1f2127; --ink: #e8eaed; --ink-2: #9aa3af; --ink-3: #6b7280;
+      --line: #2c2f36; --accent: #8ab4f8; --accent-soft: #1c2b41;
+      --green: #81c995; --green-soft: #1d2e22; --red: #f28b82; --red-soft: #3a2222;
+      --amber: #fdd663; --amber-soft: #332b13;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.6; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+  header.hd { display: flex; align-items: center; gap: 10px; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
+  .logo { width: 30px; height: 30px; border-radius: 8px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; }
+  .brand { font-weight: 800; font-size: 18px; letter-spacing: -.02em; }
+  .brand small { display: block; font-size: 12px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; }
+  h2 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; margin: 30px 0 10px; }
+  h3 { font-size: 13px; font-weight: 700; margin: 16px 0 6px; color: var(--ink); }
+  p { font-size: 14px; color: var(--ink-2); margin-bottom: 10px; }
+  ul { margin: 0 0 12px 20px; }
+  li { font-size: 14px; color: var(--ink-2); margin-bottom: 6px; }
+  strong { color: var(--ink); font-weight: 700; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 14px; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-right: 6px; }
+  .err { border-left: 3px solid var(--amber); background: var(--amber-soft); color: var(--amber); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
+  .err.red { border-left-color: var(--red); background: var(--red-soft); color: var(--red); }
+  .err strong { color: inherit; }
+  footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-3); }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="hd">
+      <div class="logo">S</div>
+      <div class="brand">SignalX<small>Help &amp; getting started</small></div>
+    </header>
+
+    <h2>Getting started</h2>
+    <div class="card">
+      <p>Open SignalX by clicking its icon in the Chrome toolbar. It opens as a <strong>side panel</strong> beside the page you're reading.</p>
+      <p>The panel is <strong>per tab</strong> — each tab keeps its own view, so you can browse news in one tab while you work in another.</p>
+      <p>Headlines and search work immediately, with <strong>no account and no key</strong>.</p>
+    </div>
+
+    <h2>Adding your AI key (BYOK)</h2>
+    <div class="card">
+      <p>SignalX is <strong>bring-your-own-key</strong>: AI features (summaries, source comparison, and search overviews) run through an AI provider account that you own and control.</p>
+      <h3>Supported providers</h3>
+      <ul>
+        <li><span class="tag">Anthropic</span> Claude models</li>
+        <li><span class="tag">OpenAI</span> GPT models</li>
+        <li><span class="tag">Gemini</span> Google models</li>
+        <li><span class="tag">OpenRouter</span> a gateway to many models</li>
+      </ul>
+      <h3>Where your key lives</h3>
+      <p>Your key is stored <strong>locally on this device only</strong>, encrypted in Chrome storage. It is never synced and never sent to SignalX — it goes only to the AI provider you choose. See the Privacy Policy for details.</p>
+      <p>Add or change your key under <strong>Settings, AI Provider</strong>. Use <strong>Test key</strong> to verify it before saving.</p>
+    </div>
+
+    <h2>Summaries &amp; comparison</h2>
+    <div class="card">
+      <p>Open any story to generate an AI <strong>summary</strong>. Choose a length: <strong>Short</strong>, <strong>Detailed</strong>, or <strong>Key facts</strong>. Summaries stream in as they're generated.</p>
+      <p>Use <strong>Compare sources</strong> to see common facts, each publisher's perspective, and how coverage differs across outlets.</p>
+      <p>Each summary shows the model used and an estimated cost. Repeated requests are served from cache at no cost.</p>
+      <p>Give a quick thumbs up or thumbs down on any summary or comparison — your feedback stays on this device.</p>
+    </div>
+
+    <h2>Bookmarks</h2>
+    <div class="card">
+      <p>Save articles and summaries to <strong>folders</strong> for later. Open the <strong>Saved</strong> tab, tap a folder to see what's inside, and use the trash button on any row to remove it.</p>
+    </div>
+
+    <h2>Troubleshooting</h2>
+    <div class="card">
+      <p>When an AI request fails, SignalX shows a clear card with recovery actions. Your headlines and search keep working — only AI features pause.</p>
+      <div class="err"><strong>Rate limited (429):</strong> your provider is throttling requests. SignalX retries automatically; you can also retry now or switch to a different model.</div>
+      <div class="err red"><strong>Invalid key (401):</strong> the key was rejected. Update it under Settings and use Test key.</div>
+      <div class="err red"><strong>Billing / out of credits:</strong> your provider account needs credits. Switch provider or open your provider's billing page.</div>
+      <div class="err"><strong>Offline:</strong> SignalX can't reach the news sources or your provider. Check your connection and retry.</div>
+    </div>
+
+    <h2>FAQ</h2>
+    <div class="card">
+      <h3>Is SignalX free?</h3>
+      <p><strong>Yes.</strong> Reading headlines and searching the news is completely free. AI features (summaries, comparison, overviews) use <strong>your own AI key</strong>, so any AI usage is billed by your chosen provider — not by SignalX.</p>
+    </div>
+
+    <footer>SignalX runs entirely on your device. See the Privacy Policy for how your data is handled.</footer>
+  </main>
+</body>
+</html>

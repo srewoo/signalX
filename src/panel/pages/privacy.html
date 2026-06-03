@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SignalX — Privacy Policy</title>
+<style>
+  /* Design tokens copied verbatim from src/panel/styles.css. Fully offline:
+     no remote fonts or links. System font stack fallback for the static page. */
+  :root {
+    --bg: #fafafa; --surface: #fff; --ink: #111418; --ink-2: #5c6470; --ink-3: #9aa3af;
+    --line: #e8eaed; --accent: #1a73e8; --accent-soft: #e8f0fe;
+    --green: #1e8e3e; --green-soft: #e6f4ea; --red: #c5221f; --red-soft: #fce8e6;
+    --amber: #b06000; --amber-soft: #fef7e0;
+    --radius: 10px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181c; --surface: #1f2127; --ink: #e8eaed; --ink-2: #9aa3af; --ink-3: #6b7280;
+      --line: #2c2f36; --accent: #8ab4f8; --accent-soft: #1c2b41;
+      --green: #81c995; --green-soft: #1d2e22; --red: #f28b82; --red-soft: #3a2222;
+      --amber: #fdd663; --amber-soft: #332b13;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.6; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+  header.hd { display: flex; align-items: center; gap: 10px; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
+  .logo { width: 30px; height: 30px; border-radius: 8px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; }
+  .brand { font-weight: 800; font-size: 18px; letter-spacing: -.02em; }
+  .brand small { display: block; font-size: 12px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; }
+  h2 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; margin: 28px 0 10px; }
+  p { font-size: 14px; color: var(--ink-2); margin-bottom: 10px; }
+  ul { margin: 0 0 12px 20px; }
+  li { font-size: 14px; color: var(--ink-2); margin-bottom: 6px; }
+  strong { color: var(--ink); font-weight: 700; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 14px; }
+  .lede { font-size: 15px; color: var(--ink); }
+  .note { display: flex; gap: 10px; align-items: flex-start; background: var(--green-soft); color: var(--green); border-radius: 8px; padding: 12px 14px; font-size: 13px; }
+  footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-3); }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="hd">
+      <div class="logo">S</div>
+      <div class="brand">SignalX<small>Privacy Policy</small></div>
+    </header>
+
+    <p class="lede">SignalX is built to keep your reading private. In plain language: <strong>we don't track you, we don't sell your browsing history, and there is no SignalX server collecting your data.</strong></p>
+
+    <h2>No tracking</h2>
+    <div class="card">
+      <p>SignalX does not include analytics, advertising trackers, or fingerprinting. We do not build a profile of you and we do not record which articles you read.</p>
+    </div>
+
+    <h2>No sale of your browsing history</h2>
+    <div class="card">
+      <p>Your reading and search activity stays on your device. We never sell, rent, or share your browsing history with anyone.</p>
+    </div>
+
+    <h2>No server</h2>
+    <div class="card">
+      <p>SignalX has no backend server of its own. The extension runs entirely inside your browser. There is no SignalX account, and nothing you do is sent to us.</p>
+    </div>
+
+    <h2>Your AI key</h2>
+    <div class="card">
+      <p>If you add an AI key to unlock summaries and comparison, that key is <strong>stored locally on your device, encrypted</strong>, in Chrome storage. It is never synced across devices and never sent to SignalX.</p>
+      <p>Your key — and the article text needed to produce a summary — leave your device <strong>only</strong> when they are sent to <strong>the AI provider you chose</strong> (Anthropic, OpenAI, Gemini, or OpenRouter). That provider's own privacy terms then apply to that request.</p>
+      <div class="note">You are always in control: remove your key in Settings at any time, and AI features simply stop while headlines and search keep working.</div>
+    </div>
+
+    <h2>News content</h2>
+    <div class="card">
+      <p>Headlines and articles are fetched <strong>directly from publishers' RSS feeds</strong> by your browser. These requests go to the news sources themselves, not through any SignalX server.</p>
+    </div>
+
+    <h2>Feedback &amp; bookmarks</h2>
+    <div class="card">
+      <p>Your thumbs up / thumbs down feedback and your saved bookmarks are stored <strong>locally on your device</strong>. They are not uploaded anywhere.</p>
+    </div>
+
+    <h2>Contact</h2>
+    <div class="card">
+      <p>Questions about privacy? Reach the SignalX team at <strong>[contact email placeholder]</strong>.</p>
+    </div>
+
+    <footer>This policy describes how the SignalX extension handles data. Because SignalX has no server, the protections above are enforced by the extension running on your device.</footer>
+  </main>
+</body>
+</html>

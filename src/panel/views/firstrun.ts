@@ -7,6 +7,7 @@
 import { el, render } from '../lib/dom';
 import { icon } from '../lib/icons';
 import { topbar } from '../components/chrome';
+import { pageFooter } from '../components/footer';
 import { navigate } from '../router';
 
 const SKIP_KEY = 'signalx-skip-onboarding';
@@ -36,6 +37,7 @@ export function renderFirstRun(root: HTMLElement): void {
     ]),
     el('button', { class: 'act-btn primary firstrun-btn', onClick: () => navigate({ view: 'settings' }) }, ['Add your AI key']),
     el('button', { class: 'act-btn borderless firstrun-btn', onClick: () => { markSkipped(); navigate({ view: 'feed' }); } }, ['Skip — browse without AI']),
+    pageFooter(),
   ]);
   render(root, topbar('SignalX', null), content);
 }

@@ -1,11 +1,16 @@
 /**
- * Saved / Bookmarks (prototype screen 13): folders list + recently saved.
- * Summaries carry a sparkles badge; tapping a saved summary reopens it (cached).
+ * Saved / Bookmarks (prototype screen 13).
+ *
+ * Root view: folders list + recently saved. Summaries carry a sparkles badge.
+ * Tapping a folder drills into a folder view (its items, a back affordance, the
+ * folder name as title). Each saved row has an unobtrusive remove (trash) button
+ * that calls bookmarks/remove and drops the row from the DOM on success, with a
+ * brief inline error on failure.
  */
 
-import { el, render } from '../lib/dom';
+import { el, render, setText } from '../lib/dom';
 import { icon } from '../lib/icons';
-import { topbar } from '../components/chrome';
+import { topbar, backbar } from '../components/chrome';
 import { skelCards } from '../components/skeletons';
 import { errorCard } from '../components/errorCard';
 import { relativeTime } from '../lib/time';
@@ -15,22 +20,26 @@ import type { Folder, SavedItem } from '../../shared/contracts';
 export function renderSaved(root: HTMLElement): void {
   const content = el('div', { class: 'content' });
   render(root, topbar('Saved', 'saved'), content);
-  void load(content);
+  void loadRoot(root, content);
 }
 
-async function load(content: HTMLElement): Promise<void> {
+// ───────────────────────── Root (folders + recent) ─────────────────────────
+
+async function loadRoot(root: HTMLElement, content: HTMLElement): Promise<void> {
+  render(root, topbar('Saved', 'saved'), content);
   render(content, skelCards(3));
+
   const [foldersRes, itemsRes] = await Promise.all([
     send({ type: 'bookmarks/listFolders' }),
     send({ type: 'bookmarks/list' }),
   ]);
 
   if (!foldersRes.ok) {
-    render(content, errorCard(foldersRes.error, { onRetry: () => void load(content) }));
+    render(content, errorCard(foldersRes.error, { onRetry: () => void loadRoot(root, content) }));
     return;
   }
   if (!itemsRes.ok) {
-    render(content, errorCard(itemsRes.error, { onRetry: () => void load(content) }));
+    render(content, errorCard(itemsRes.error, { onRetry: () => void loadRoot(root, content) }));
     return;
   }
 
@@ -42,13 +51,17 @@ async function load(content: HTMLElement): Promise<void> {
     return;
   }
 
-  render(content, foldersSection(folders, items), recentSection(items));
+  render(content, foldersSection(root, content, folders, items), recentSection(items));
 }
 
-function foldersSection(folders: readonly Folder[], items: readonly SavedItem[]): HTMLElement {
+function foldersSection(root: HTMLElement, content: HTMLElement, folders: readonly Folder[], items: readonly SavedItem[]): HTMLElement {
   const count = (id: string): number => items.filter((i) => i.folderId === id).length;
   const rows = folders.map((f) =>
-    el('button', { class: 'folder-row', 'aria-label': `Folder ${f.name}, ${count(f.id)} items` }, [
+    el('button', {
+      class: 'folder-row',
+      'aria-label': `Open folder ${f.name}, ${count(f.id)} items`,
+      onClick: () => void loadFolder(root, content, f),
+    }, [
       icon('folder', 18),
       el('span', { class: 'f-name' }, [f.name]),
       el('span', { class: 'f-count' }, [`${count(f.id)} items`]),
@@ -70,14 +83,68 @@ function recentSection(items: readonly SavedItem[]): HTMLElement {
   ]);
 }
 
+// ───────────────────────── Folder drill-down ─────────────────────────
+
+async function loadFolder(root: HTMLElement, content: HTMLElement, folder: Folder): Promise<void> {
+  const bar = backbar('Saved', () => void loadRoot(root, content));
+  bar.appendChild(el('div', { class: 'title', style: 'font-size:14px;' }, [folder.name]));
+  render(root, bar, content);
+  render(content, skelCards(3));
+
+  const res = await send({ type: 'bookmarks/list', folderId: folder.id });
+  if (!res.ok) {
+    render(content, errorCard(res.error, { onRetry: () => void loadFolder(root, content, folder) }));
+    return;
+  }
+
+  const items = res.value;
+  if (items.length === 0) {
+    render(content, el('div', { class: 'empty-state' }, ['Nothing in this folder yet.']));
+    return;
+  }
+
+  const sorted = [...items].sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  render(content, el('div', {}, sorted.map((item) => savedCard(item))));
+}
+
+// ───────────────────────── Saved row + remove ─────────────────────────
+
 function savedCard(item: SavedItem): HTMLElement {
   const headline = item.kind === 'summary' ? item.headline : item.article.title;
   const badge = item.kind === 'summary'
     ? el('span', { class: 'src ai-badge' }, [icon('sparkles', 13), el('span', {}, ['AI Summary'])])
     : el('span', { class: 'src' }, [item.article.sourceName]);
 
-  return el('div', { class: 'card' }, [
-    el('div', { class: 'meta' }, [badge, el('span', { class: 'dot' }), relativeTime(item.savedAt)]),
-    el('h3', {}, [headline]),
+  const errorText = el('span', {}, ['']);
+  const error = el('div', { class: 'key-status bad', style: 'display:none; margin-top:8px;', role: 'alert' }, [icon('x', 14), errorText]);
+
+  const remove = el('button', {
+    class: 'row-remove',
+    'aria-label': `Remove "${headline}" from saved`,
+    title: 'Remove',
+    onClick: async () => {
+      remove.disabled = true;
+      error.style.display = 'none';
+      const res = await send({ type: 'bookmarks/remove', id: item.id });
+      if (res.ok) {
+        card.remove();
+        return;
+      }
+      remove.disabled = false;
+      setText(errorText, res.error.message);
+      error.style.display = '';
+    },
+  }, [icon('trash', 16)]);
+
+  const card = el('div', { class: 'card saved-card' }, [
+    el('div', { class: 'saved-head' }, [
+      el('div', { class: 'saved-body' }, [
+        el('div', { class: 'meta' }, [badge, el('span', { class: 'dot' }), relativeTime(item.savedAt)]),
+        el('h3', {}, [headline]),
+      ]),
+      remove,
+    ]),
+    error,
   ]);
+  return card;
 }

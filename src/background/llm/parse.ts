@@ -63,6 +63,15 @@ function fallbackText(text: string): string {
   return stripFences(text);
 }
 
+/**
+ * Public defensive stripper for plain-prose LLM output (e.g. search overview).
+ * Clean prose passes through with fences removed; any JSON-looking scaffolding
+ * is salvaged into prose so the user never sees raw `{"key":...}` dumps.
+ */
+export function stripJsonScaffolding(text: string): string {
+  return fallbackText(text);
+}
+
 /** Return the first balanced {...} substring, or null. */
 export function extractJsonObject(text: string): string | null {
   const cleaned = stripFences(text);

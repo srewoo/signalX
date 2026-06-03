@@ -2,9 +2,10 @@ import type { ProviderSettings, Request, ResponseMap, Result } from '../shared/c
 import { err, ok } from './result';
 import { getFeed, getTrending, search } from './feeds/index';
 import { readSummaryCache } from './llm/summaryCache';
-import { generateComparison } from './llm/generate';
+import { generateComparison, generateOverview } from './llm/generate';
 import { testKey } from './llm/client';
 import { getClusterById } from './feeds/cache';
+import type { StoryCluster } from '../shared/contracts';
 import { getPrefs, getProvider, setPrefs, setProvider } from './storage/settings';
 import {
   createFolder,
@@ -32,6 +33,22 @@ async function handleCompare(clusterId: string): Promise<Resp<'compare/get'>> {
   const provider = await requireProvider();
   if (!provider.ok) return err(provider.error);
   return generateComparison(cluster, provider.value);
+}
+
+async function handleOverview(
+  req: Extract<Request, { type: 'search/overview' }>,
+): Promise<Resp<'search/overview'>> {
+  const provider = await requireProvider();
+  if (!provider.ok) return err(provider.error);
+  // Resolve clusterIds via the session index; silently skip ids that no longer
+  // resolve (feed may have rotated). If NONE resolve, there's nothing to
+  // summarize — surface INTERNAL so the panel prompts a refresh.
+  const resolved = await Promise.all(req.clusterIds.map((id) => getClusterById(id)));
+  const clusters = resolved.filter((c): c is StoryCluster => c !== null);
+  if (clusters.length === 0) {
+    return err(appError('INTERNAL', 'Those stories are no longer available. Refresh and retry.'));
+  }
+  return generateOverview(req.query, clusters, provider.value);
 }
 
 async function handleTestKey(req: Extract<Request, { type: 'settings/testKey' }>): Promise<Resp<'settings/testKey'>> {
@@ -81,8 +98,10 @@ export async function route(req: Request): Promise<Result<unknown>> {
     case 'bookmarks/remove':
       await removeItem(req.id);
       return ok(undefined);
+    case 'search/overview':
+      return handleOverview(req);
     case 'feedback/submit':
-      await appendFeedback(req.clusterId, req.summaryType, req.verdict);
+      await appendFeedback(req.clusterId, req.target, req.verdict, req.summaryType);
       return ok(undefined);
     case 'tabs/openSources':
       return openSources(req.urls);

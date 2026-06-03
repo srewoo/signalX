@@ -3,7 +3,7 @@
  * perspective cards, coverage differences, feedback row. Loading + error states.
  */
 
-import { el, render } from '../lib/dom';
+import { el, render, setText } from '../lib/dom';
 import { icon } from '../lib/icons';
 import { backbar } from '../components/chrome';
 import { errorCard } from '../components/errorCard';
@@ -36,7 +36,7 @@ function view(cluster: StoryCluster, cmp: SourceComparison): HTMLElement {
     el('div', { class: 'section-h' }, ['Perspectives']),
     ...perspectives(cmp.perspectives),
     coverageDifferences(cmp.coverageDifferences),
-    feedbackRow(),
+    feedbackRow(cluster.id),
   ]);
 }
 
@@ -66,15 +66,23 @@ function coverageDifferences(text: string): HTMLElement {
   ]);
 }
 
-function feedbackRow(): HTMLElement {
+function feedbackRow(clusterId: string): HTMLElement {
+  const label = el('span', { class: 'fb-label' }, ['Was this comparison useful?']);
   const up = el('button', { class: 'fb-btn', 'aria-label': 'Useful' }, [icon('thumbs-up', 16)]);
   const down = el('button', { class: 'fb-btn', 'aria-label': 'Not useful' }, [icon('thumbs-down', 16)]);
-  up.addEventListener('click', () => up.classList.add('on'));
-  down.addEventListener('click', () => down.classList.add('on'));
-  return el('div', { class: 'fb-row' }, [
-    el('span', { class: 'fb-label' }, ['Was this comparison useful?']),
-    up, down,
-  ]);
+
+  const submit = async (verdict: 'up' | 'down'): Promise<void> => {
+    up.classList.toggle('on', verdict === 'up');
+    down.classList.toggle('on', verdict === 'down');
+    up.disabled = true;
+    down.disabled = true;
+    await send({ type: 'feedback/submit', clusterId, target: 'comparison', verdict });
+    setText(label, 'Thanks for the feedback.');
+  };
+
+  up.addEventListener('click', () => void submit('up'));
+  down.addEventListener('click', () => void submit('down'));
+  return el('div', { class: 'fb-row' }, [label, up, down]);
 }
 
 function loadingSkeleton(): HTMLElement {

@@ -192,3 +192,20 @@ button { font-family: var(--font); }
 .firstrun-h { font-size: 17px; font-weight: 700; letter-spacing: -.015em; }
 .firstrun-p { font-size: 13px; color: var(--ink-2); line-height: 1.6; max-width: 260px; }
 .firstrun-btn { flex: none; width: 220px; padding: 11px 0; }
+
+/* Search AI Overview prose + its inline gen-meta. */
+.overview-prose { font-size: 12.5px; line-height: 1.6; color: var(--ink); }
+.card .meta .gen-live { color: var(--accent); font-weight: 700; }
+
+/* Saved row with unobtrusive remove control. */
+.saved-card .saved-head { display: flex; align-items: flex-start; gap: 10px; }
+.saved-card .saved-body { flex: 1; min-width: 0; }
+.row-remove { flex: none; width: 28px; height: 28px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: var(--ink-3); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.row-remove:hover { background: var(--red-soft); color: var(--red); border-color: var(--red-soft); }
+.row-remove:disabled { opacity: .5; cursor: default; }
+
+/* Footer links to the bundled Help / Privacy pages. */
+.page-footer { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); }
+.footer-link { border: none; background: transparent; color: var(--ink-3); font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font); padding: 2px 4px; }
+.footer-link:hover { color: var(--accent); }
+.footer-sep { color: var(--ink-3); font-size: 12px; }

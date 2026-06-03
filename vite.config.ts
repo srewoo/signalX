@@ -1,9 +1,11 @@
 import { resolve } from 'node:path';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
 
 const root = __dirname;
+
+const ICON_SIZES = [16, 32, 48, 128] as const;
 
 /**
  * Emits a dist/manifest.json with the background service_worker path rewritten
@@ -33,8 +35,37 @@ function manifestPlugin(): Plugin {
         fileName: 'manifest.json',
         source: JSON.stringify(manifest, null, 2),
       });
+
+      // Copy extension icons into dist/icons/ at the stable paths the manifest
+      // references. Emitting as bytes keeps them unhashed so manifest paths
+      // resolve without rewriting.
+      for (const size of ICON_SIZES) {
+        const src = resolve(root, `icons/icon${size}.png`);
+        if (!existsSync(src)) continue;
+        this.emitFile({
+          type: 'asset',
+          fileName: `icons/icon${size}.png`,
+          source: readFileSync(src),
+        });
+      }
     },
   };
+}
+
+/** Rollup HTML inputs that exist on disk (static pages authored by the UI agent). */
+function pageInputs(): Record<string, string> {
+  const inputs: Record<string, string> = {
+    panel: resolve(root, 'src/panel/panel.html'),
+    background: resolve(root, 'src/background/index.ts'),
+  };
+  const pages: Record<string, string> = {
+    help: resolve(root, 'src/panel/pages/help.html'),
+    privacy: resolve(root, 'src/panel/pages/privacy.html'),
+  };
+  for (const [name, path] of Object.entries(pages)) {
+    if (existsSync(path)) inputs[name] = path;
+  }
+  return inputs;
 }
 
 export default defineConfig({
@@ -47,10 +78,7 @@ export default defineConfig({
     target: 'es2022',
     modulePreload: false,
     rollupOptions: {
-      input: {
-        panel: resolve(root, 'src/panel/panel.html'),
-        background: resolve(root, 'src/background/index.ts'),
-      },
+      input: pageInputs(),
       output: {
         format: 'es',
         entryFileNames: (chunk) =>

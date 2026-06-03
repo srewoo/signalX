@@ -7,7 +7,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "zip": "npm run build && rm -f signalx-v1.0.0.zip && cd dist && zip -r ../signalx-v1.0.0.zip . -x '.*'"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.270",

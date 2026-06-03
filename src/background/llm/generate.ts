@@ -10,12 +10,19 @@ import type {
 import { appError, err, ok } from '../result';
 import { streamWithRetry } from './client';
 import { estCostUsd } from './cost';
-import { parseComparison, parseSummarySections, progressiveWhatHappened } from './parse';
-import { buildComparePrompt, buildSummaryPrompt } from './prompts';
+import {
+  parseComparison,
+  parseSummarySections,
+  progressiveWhatHappened,
+  stripJsonScaffolding,
+} from './parse';
+import { buildComparePrompt, buildOverviewPrompt, buildSummaryPrompt } from './prompts';
+import { readOverviewCache, writeOverviewCache } from './overviewCache';
 import { readSummaryCache, writeSummaryCache } from './summaryCache';
 
 const SUMMARY_MAX_TOKENS = 1200;
 const COMPARE_MAX_TOKENS = 1400;
+const OVERVIEW_MAX_TOKENS = 300;
 
 /** Callback for live "whatHappened" progress during summary streaming. */
 export type WhatHappenedListener = (text: string) => void;
@@ -79,6 +86,48 @@ export async function generateSummary(
   };
   await writeSummaryCache(summary);
   return ok(summary);
+}
+
+export interface OverviewResult {
+  readonly overview: string;
+  readonly model: string;
+  readonly estCostUsd: number;
+  readonly cached: boolean;
+}
+
+/**
+ * Generate a plain-prose AI overview of the news landscape for a query, given
+ * the resolved clusters. Cache-first (1h, keyed query+model). Non-streamed:
+ * reuses streamWithRetry, which accumulates deltas into full text. Output is
+ * defensively stripped of any JSON scaffolding before returning.
+ */
+export async function generateOverview(
+  query: string,
+  clusters: readonly StoryCluster[],
+  settings: ProviderSettings,
+): Promise<Result<OverviewResult>> {
+  const cached = await readOverviewCache(query, settings.model);
+  if (cached) {
+    return ok({ overview: cached.overview, model: cached.model, estCostUsd: 0, cached: true });
+  }
+
+  const { system, user } = buildOverviewPrompt(query, clusters);
+  const res = await streamWithRetry(settings, system, user, OVERVIEW_MAX_TOKENS, () => {
+    /* overview is not streamed to the UI */
+  });
+  if (!res.ok) return err(res.error);
+
+  const overview = stripJsonScaffolding(res.value.text).trim();
+  if (!overview) {
+    return err(appError('PROVIDER_ERROR', 'The model returned an empty overview. Try again.'));
+  }
+  await writeOverviewCache(query, settings.model, overview);
+  return ok({
+    overview,
+    model: settings.model,
+    estCostUsd: estCostUsd(settings.provider, settings.model, system + user, res.value.text),
+    cached: false,
+  });
 }
 
 /** Generate a source comparison (non-streamed; returns parsed result). */

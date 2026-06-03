@@ -169,7 +169,7 @@ function feedbackRow(s: Session): HTMLElement {
   const submit = async (verdict: 'up' | 'down'): Promise<void> => {
     up.classList.toggle('on', verdict === 'up');
     down.classList.toggle('on', verdict === 'down');
-    await send({ type: 'feedback/submit', clusterId: s.cluster.id, summaryType: s.type, verdict });
+    await send({ type: 'feedback/submit', clusterId: s.cluster.id, target: 'summary', summaryType: s.type, verdict });
   };
 
   return el('div', { class: 'fb-row' }, [el('span', { class: 'fb-label' }, ['Was this summary useful?']), up, down, regen]);

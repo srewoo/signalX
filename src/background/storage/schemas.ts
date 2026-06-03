@@ -77,7 +77,9 @@ export const cachedSummarySchema = summarySchema;
 
 export const feedbackEntrySchema = z.object({
   clusterId: z.string(),
-  summaryType: z.enum(['short', 'detailed', 'keyfacts']),
+  target: z.enum(['summary', 'comparison']),
+  // Present for 'summary' feedback, absent for 'comparison'.
+  summaryType: z.enum(['short', 'detailed', 'keyfacts']).optional(),
   verdict: z.enum(['up', 'down']),
   at: z.string(),
 });

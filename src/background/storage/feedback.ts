@@ -19,11 +19,20 @@ async function read(): Promise<z.infer<typeof feedbackArr>> {
 
 export async function appendFeedback(
   clusterId: string,
-  summaryType: SummaryType,
+  target: 'summary' | 'comparison',
   verdict: 'up' | 'down',
+  summaryType?: SummaryType,
 ): Promise<void> {
   const entries = await read();
-  const next = [...entries, { clusterId, summaryType, verdict, at: new Date().toISOString() }];
+  const entry = {
+    clusterId,
+    target,
+    verdict,
+    at: new Date().toISOString(),
+    // Only record summaryType for summary feedback; comparison has none.
+    ...(target === 'summary' && summaryType ? { summaryType } : {}),
+  };
+  const next = [...entries, entry];
   // Keep only the most recent MAX_ENTRIES.
   const trimmed = next.length > MAX_ENTRIES ? next.slice(next.length - MAX_ENTRIES) : next;
   await writeRaw(local(), FEEDBACK_KEY, trimmed);

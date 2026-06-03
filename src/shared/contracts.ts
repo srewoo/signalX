@@ -133,13 +133,16 @@ export type Request =
   | { readonly type: 'bookmarks/save'; readonly item: SavedItem }
   | { readonly type: 'bookmarks/list'; readonly folderId?: string }
   | { readonly type: 'bookmarks/remove'; readonly id: string }
-  | { readonly type: 'feedback/submit'; readonly clusterId: string; readonly summaryType: SummaryType; readonly verdict: 'up' | 'down' }
+  | { readonly type: 'search/overview'; readonly query: string; readonly clusterIds: readonly string[] }
+  | { readonly type: 'feedback/submit'; readonly clusterId: string; readonly target: 'summary' | 'comparison'; readonly summaryType?: SummaryType; readonly verdict: 'up' | 'down' }
   | { readonly type: 'tabs/openSources'; readonly urls: readonly string[] };
 
 export interface ResponseMap {
   'feed/get': { clusters: readonly StoryCluster[]; fetchedAt: string; fromCache: boolean };
   'feed/trending': { topics: readonly string[] };
   'search/query': { clusters: readonly StoryCluster[]; totalArticles: number };
+  /** AI overview of search results (key-gated; NO_KEY error in keyless mode). Cached per query+model 1h. */
+  'search/overview': { overview: string; model: string; estCostUsd: number; cached: boolean };
   'summary/get': Summary | null;
   'compare/get': SourceComparison;
   'settings/getProvider': ProviderSettings | null;

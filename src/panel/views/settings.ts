@@ -8,6 +8,7 @@ import { el, render } from '../lib/dom';
 import { icon } from '../lib/icons';
 import { backbar } from '../components/chrome';
 import { errorCard } from '../components/errorCard';
+import { pageFooter } from '../components/footer';
 import { COUNTRIES, SUMMARY_LENGTHS, PROVIDERS, MODELS, defaultModel } from '../lib/catalog';
 import { applyTheme } from '../lib/theme';
 import { send } from '../lib/messaging';
@@ -57,6 +58,7 @@ function draw(content: HTMLElement, ctx: AppContext, prefs: Preferences, draft: 
     lengthField(prefs),
     themeRow(prefs),
     secureNote(),
+    pageFooter(),
   );
 }
 

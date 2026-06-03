@@ -58,6 +58,41 @@ const COMPARE_SCHEMA = `Return ONLY valid JSON, no prose, no markdown fences, ma
   "coverageDifferences": string
 }`;
 
+/** Max clusters fed into the overview prompt; keeps the prompt bounded. */
+const OVERVIEW_MAX_CLUSTERS = 8;
+
+function overviewClusterBlock(clusters: readonly StoryCluster[]): string {
+  return clusters
+    .slice(0, OVERVIEW_MAX_CLUSTERS)
+    .map((c, i) => {
+      const sources = [...new Set(c.articles.map((a) => a.sourceName))].slice(0, 6).join(', ');
+      const snippet = c.articles.find((a) => a.snippet)?.snippet;
+      const snippetLine = snippet ? `\n    ${snippet}` : '';
+      return `[${i + 1}] ${c.headline} (sources: ${sources || 'unknown'})${snippetLine}`;
+    })
+    .join('\n');
+}
+
+/**
+ * Build the search-overview prompt. Produces a short plain-prose synthesis of
+ * the news landscape for a query. No JSON — explicitly prose, 2–3 sentences.
+ */
+export function buildOverviewPrompt(
+  query: string,
+  clusters: readonly StoryCluster[],
+): PromptBundle {
+  const system =
+    'You are a precise news editor. Given a search query and a set of clustered ' +
+    'headlines from multiple outlets, write a neutral 2-3 sentence plain-text overview ' +
+    'of the current news landscape for that query. Synthesize across the clusters; do not ' +
+    'invent facts beyond the provided headlines and snippets. ' +
+    'Return plain prose only — no JSON, no markdown, no bullet points, no headings.';
+  const user =
+    `Search query: ${query}\n\nTop story clusters:\n${overviewClusterBlock(clusters)}\n\n` +
+    'Write the 2-3 sentence overview now as plain prose.';
+  return { system, user };
+}
+
 /** Build the source-comparison prompt for a cluster. */
 export function buildComparePrompt(cluster: StoryCluster): PromptBundle {
   const system =

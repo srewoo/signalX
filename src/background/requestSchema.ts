@@ -84,9 +84,15 @@ export const requestSchema: z.ZodType<Request> = z.discriminatedUnion('type', [
   z.object({ type: z.literal('bookmarks/list'), folderId: z.string().optional() }),
   z.object({ type: z.literal('bookmarks/remove'), id: z.string().min(1) }),
   z.object({
+    type: z.literal('search/overview'),
+    query: z.string().min(1),
+    clusterIds: z.array(z.string()),
+  }),
+  z.object({
     type: z.literal('feedback/submit'),
     clusterId: z.string(),
-    summaryType,
+    target: z.enum(['summary', 'comparison']),
+    summaryType: summaryType.optional(),
     verdict: z.enum(['up', 'down']),
   }),
   z.object({ type: z.literal('tabs/openSources'), urls: z.array(z.string()) }),

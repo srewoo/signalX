@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { buildSummaryPrompt, buildComparePrompt, PROMPT_VERSION } from '../../src/background/llm/prompts';
+import {
+  buildSummaryPrompt,
+  buildComparePrompt,
+  buildOverviewPrompt,
+  PROMPT_VERSION,
+} from '../../src/background/llm/prompts';
 import type { Article, StoryCluster } from '../../src/shared/contracts';
 
 function article(id: string, title: string, sourceName: string, snippet?: string): Article {
@@ -87,6 +92,41 @@ describe('buildComparePrompt', () => {
 
   it('should include the source names of the articles when building', () => {
     const { user } = buildComparePrompt(cluster);
+    expect(user).toContain('Reuters');
+    expect(user).toContain('BBC');
+  });
+});
+
+describe('buildOverviewPrompt', () => {
+  const second: StoryCluster = {
+    id: 'c2',
+    headline: 'Markets rally on rate decision',
+    newestAt: '2026-06-03T12:00:00.000Z',
+    articles: [article('d', 'Sensex jumps 500 points', 'TOI', 'Banks lead gains')],
+  };
+
+  it('should include the query and cluster headlines when building', () => {
+    const { user } = buildOverviewPrompt('interest rates', [cluster, second]);
+    expect(user).toContain('interest rates');
+    expect(user).toContain('Central bank holds rates');
+    expect(user).toContain('Markets rally on rate decision');
+  });
+
+  it('should instruct plain prose and forbid JSON in the system prompt', () => {
+    const { system } = buildOverviewPrompt('interest rates', [cluster]);
+    expect(system).toContain('plain prose only');
+    expect(system).toContain('no JSON');
+    expect(system).not.toContain('Return ONLY valid JSON');
+  });
+
+  it('should request a 2-3 sentence overview when building', () => {
+    const { system, user } = buildOverviewPrompt('q', [cluster]);
+    expect(system).toContain('2-3 sentence');
+    expect(user).toContain('2-3 sentence');
+  });
+
+  it('should list distinct source names for a cluster', () => {
+    const { user } = buildOverviewPrompt('q', [cluster]);
     expect(user).toContain('Reuters');
     expect(user).toContain('BBC');
   });
