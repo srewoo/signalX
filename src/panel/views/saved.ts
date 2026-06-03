@@ -56,22 +56,60 @@ async function loadRoot(root: HTMLElement, content: HTMLElement): Promise<void> 
 
 function foldersSection(root: HTMLElement, content: HTMLElement, folders: readonly Folder[], items: readonly SavedItem[]): HTMLElement {
   const count = (id: string): number => items.filter((i) => i.folderId === id).length;
-  const rows = folders.map((f) =>
-    el('button', {
-      class: 'folder-row',
-      'aria-label': `Open folder ${f.name}, ${count(f.id)} items`,
-      onClick: () => void loadFolder(root, content, f),
-    }, [
-      icon('folder', 18),
-      el('span', { class: 'f-name' }, [f.name]),
-      el('span', { class: 'f-count' }, [`${count(f.id)} items`]),
-      el('span', { class: 'f-chevron' }, [icon('chevron-right', 16)]),
-    ]),
-  );
+  const rows = folders.map((f) => folderRow(root, content, f, count(f.id)));
   return el('div', {}, [
     el('div', { class: 'section-h' }, ['Folders']),
     rows.length > 0 ? el('div', {}, rows) : el('div', { class: 'hint' }, ['No folders yet.']),
   ]);
+}
+
+/**
+ * Folder row: open button + hover/focus-revealed delete. Delete swaps the row
+ * into an inline confirm (item count spelled out) — destructive actions never
+ * fire on a single click.
+ */
+function folderRow(root: HTMLElement, content: HTMLElement, f: Folder, itemCount: number): HTMLElement {
+  const open = el('button', {
+    class: 'folder-open',
+    'aria-label': `Open folder ${f.name}, ${itemCount} items`,
+    onClick: () => void loadFolder(root, content, f),
+  }, [
+    icon('folder', 18),
+    el('span', { class: 'f-name' }, [f.name]),
+    el('span', { class: 'f-count' }, [`${itemCount} items`]),
+    el('span', { class: 'f-chevron' }, [icon('chevron-right', 16)]),
+  ]);
+
+  const del = el('button', {
+    class: 'row-remove folder-del',
+    'aria-label': `Delete folder ${f.name}`,
+    title: 'Delete folder',
+    onClick: () => confirmState(),
+  }, [icon('trash', 16)]);
+
+  const row = el('div', { class: 'folder-row' }, [open, del]);
+
+  function confirmState(): void {
+    const msg = itemCount > 0
+      ? `Delete "${f.name}" and its ${itemCount} saved item${itemCount === 1 ? '' : 's'}?`
+      : `Delete "${f.name}"?`;
+    const confirm = el('button', { class: 'act-btn danger', onClick: async () => {
+      const res = await send({ type: 'bookmarks/removeFolder', folderId: f.id });
+      if (res.ok) {
+        void loadRoot(root, content); // refresh counts + recent list
+        return;
+      }
+      setText(warn, res.error.message);
+    } }, ['Delete']);
+    const cancel = el('button', { class: 'act-btn', onClick: () => {
+      row.replaceChildren(open, del);
+    } }, ['Cancel']);
+    const warn = el('span', { class: 'f-name', role: 'alert' }, [msg]);
+    row.replaceChildren(warn, confirm, cancel);
+    confirm.focus();
+  }
+
+  return row;
 }
 
 function recentSection(items: readonly SavedItem[]): HTMLElement {

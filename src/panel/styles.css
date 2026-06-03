@@ -209,3 +209,15 @@ button { font-family: var(--font); }
 .footer-link { border: none; background: transparent; color: var(--ink-3); font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font); padding: 2px 4px; }
 .footer-link:hover { color: var(--accent); }
 .footer-sep { color: var(--ink-3); font-size: 12px; }
+
+/* Folder row restructure: wrapper div + transparent open button + hover-revealed delete. */
+.folder-row { padding: 0; }
+.folder-open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; background: transparent; border: none; padding: 12px 14px; cursor: pointer; text-align: left; font-family: var(--font); }
+.folder-open .f-name { font-size: 13px; font-weight: 600; flex: 1; color: var(--ink); }
+.folder-open .f-count { font-size: 11px; color: var(--ink-3); }
+.folder-del { margin-right: 8px; opacity: 0; transition: opacity .12s; }
+.folder-row:hover .folder-del, .folder-del:focus-visible { opacity: 1; }
+.folder-row:has(.act-btn) { padding: 10px 14px; gap: 8px; }
+.folder-row .act-btn { flex: none; padding: 7px 14px; }
+.act-btn.danger { border-color: var(--red); color: var(--red); }
+@media (hover: none) { .folder-del { opacity: 1; } }

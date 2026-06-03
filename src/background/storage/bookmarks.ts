@@ -59,3 +59,12 @@ export async function removeItem(id: string): Promise<void> {
   const items = await readItems();
   await writeRaw(local(), ITEMS_KEY, items.filter((i) => i.id !== id));
 }
+
+/** Delete a folder AND every item saved in it. */
+export async function removeFolder(folderId: string): Promise<void> {
+  const [folders, items] = await Promise.all([readFolders(), readItems()]);
+  await Promise.all([
+    writeRaw(local(), FOLDERS_KEY, folders.filter((f) => f.id !== folderId)),
+    writeRaw(local(), ITEMS_KEY, items.filter((i) => i.folderId !== folderId)),
+  ]);
+}

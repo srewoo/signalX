@@ -84,6 +84,7 @@ export const requestSchema: z.ZodType<Request> = z.discriminatedUnion('type', [
   z.object({ type: z.literal('bookmarks/save'), item: savedItem }),
   z.object({ type: z.literal('bookmarks/list'), folderId: z.string().optional() }),
   z.object({ type: z.literal('bookmarks/remove'), id: z.string().min(1) }),
+  z.object({ type: z.literal('bookmarks/removeFolder'), folderId: z.string().min(1) }),
   z.object({
     type: z.literal('search/overview'),
     query: z.string().min(1),

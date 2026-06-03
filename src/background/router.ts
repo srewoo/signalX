@@ -13,6 +13,7 @@ import {
   listFolders,
   listItems,
   removeItem,
+  removeFolder,
   saveItem,
 } from './storage/bookmarks';
 import { appendFeedback } from './storage/feedback';
@@ -100,6 +101,9 @@ export async function route(req: Request): Promise<Result<unknown>> {
       return ok(await listItems(req.folderId));
     case 'bookmarks/remove':
       await removeItem(req.id);
+      return ok(undefined);
+    case 'bookmarks/removeFolder':
+      await removeFolder(req.folderId);
       return ok(undefined);
     case 'search/overview':
       return handleOverview(req);

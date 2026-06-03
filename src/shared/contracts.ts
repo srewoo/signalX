@@ -134,6 +134,7 @@ export type Request =
   | { readonly type: 'bookmarks/save'; readonly item: SavedItem }
   | { readonly type: 'bookmarks/list'; readonly folderId?: string }
   | { readonly type: 'bookmarks/remove'; readonly id: string }
+  | { readonly type: 'bookmarks/removeFolder'; readonly folderId: string }
   | { readonly type: 'search/overview'; readonly query: string; readonly clusterIds: readonly string[] }
   | { readonly type: 'feedback/submit'; readonly clusterId: string; readonly target: 'summary' | 'comparison'; readonly summaryType?: SummaryType; readonly verdict: 'up' | 'down' }
   | { readonly type: 'tabs/openSources'; readonly urls: readonly string[] };
@@ -158,6 +159,8 @@ export interface ResponseMap {
   'bookmarks/save': void;
   'bookmarks/list': readonly SavedItem[];
   'bookmarks/remove': void;
+  /** Deletes the folder AND all items saved in it. */
+  'bookmarks/removeFolder': void;
   'feedback/submit': void;
   'tabs/openSources': void;
 }
