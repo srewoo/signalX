@@ -15,12 +15,12 @@ describe('estCostUsd', () => {
   });
 
   it('should use the model-specific price when the model is known', () => {
-    // gpt-4o-mini: in 0.15/M, out 0.6/M. 4000 chars => 1000 tokens each.
+    // gpt-5-mini: in 0.25/M, out 2/M. 4000 chars => 1000 tokens each.
     const prompt = 'a'.repeat(4000);
     const completion = 'b'.repeat(4000);
-    const cost = estCostUsd('openai', 'gpt-4o-mini', prompt, completion);
-    // 1000/1e6*0.15 + 1000/1e6*0.6 = 0.00015 + 0.0006 = 0.00075
-    expect(cost).toBeCloseTo(0.00075, 6);
+    const cost = estCostUsd('openai', 'gpt-5-mini', prompt, completion);
+    // 1000/1e6*0.25 + 1000/1e6*2 = 0.00025 + 0.002 = 0.00225
+    expect(cost).toBeCloseTo(0.00225, 6);
   });
 
   it('should fall back to provider defaults when the model is unknown', () => {
