@@ -42,7 +42,51 @@ export function mapHttpError(status: number, bodyText: string, retryAfter: strin
   if (status >= 500) {
     return appError('PROVIDER_ERROR', 'The AI provider had a server error. Please retry.');
   }
-  return appError('PROVIDER_ERROR', `The AI provider returned an error (${status}).`);
+  const hint = extractProviderMessage(bodyText);
+  return appError(
+    'PROVIDER_ERROR',
+    hint
+      ? `The AI provider returned an error (${status}): ${hint}`
+      : `The AI provider returned an error (${status}).`,
+  );
+}
+
+/**
+ * Pull the human-readable message out of a provider error body so 4xx failures
+ * are actionable (e.g. "model not found", "max_tokens not supported").
+ * Sanitized: JSON-parsed message fields only (never raw bodies), de-quoted,
+ * whitespace-collapsed, hard-truncated. API keys never appear in these fields.
+ */
+export function extractProviderMessage(bodyText: string): string | undefined {
+  try {
+    const parsed: unknown = JSON.parse(bodyText);
+    const msg = findMessage(parsed, 0);
+    if (!msg) return undefined;
+    const clean = msg.replace(/\s+/g, ' ').trim();
+    return clean.length > 160 ? `${clean.slice(0, 157)}…` : clean;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Depth-limited search for a `message` string in a provider error payload. */
+function findMessage(value: unknown, depth: number): string | undefined {
+  if (depth > 3 || value === null || typeof value !== 'object') return undefined;
+  const obj = value as Record<string, unknown>;
+  if (typeof obj['message'] === 'string' && obj['message'].length > 0) return obj['message'];
+  for (const key of ['error', 'errors', 'detail']) {
+    const nested = obj[key];
+    if (Array.isArray(nested)) {
+      for (const item of nested) {
+        const found = findMessage(item, depth + 1);
+        if (found) return found;
+      }
+    } else {
+      const found = findMessage(nested, depth + 1);
+      if (found) return found;
+    }
+  }
+  return undefined;
 }
 
 /** Map a thrown fetch exception (abort/network) to an AppError. */

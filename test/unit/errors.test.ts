@@ -128,3 +128,30 @@ describe('backoffMs', () => {
     expect(v).toBeLessThan(800 + 800);
   });
 });
+
+describe('extractProviderMessage', () => {
+  it('should extract OpenAI-style error messages when body is JSON', async () => {
+    const { extractProviderMessage } = await import('../../src/background/llm/errors');
+    expect(extractProviderMessage('{"error":{"message":"Unsupported parameter: max_tokens","type":"invalid_request_error"}}'))
+      .toBe('Unsupported parameter: max_tokens');
+  });
+
+  it('should extract Gemini-style nested messages when wrapped in error object', async () => {
+    const { extractProviderMessage } = await import('../../src/background/llm/errors');
+    expect(extractProviderMessage('{"error":{"code":400,"message":"models/foo is not found","status":"NOT_FOUND"}}'))
+      .toBe('models/foo is not found');
+  });
+
+  it('should return undefined when body is not JSON', async () => {
+    const { extractProviderMessage } = await import('../../src/background/llm/errors');
+    expect(extractProviderMessage('<html>bad gateway</html>')).toBeUndefined();
+  });
+
+  it('should truncate very long messages when over 160 chars', async () => {
+    const { extractProviderMessage } = await import('../../src/background/llm/errors');
+    const long = JSON.stringify({ error: { message: 'x'.repeat(500) } });
+    const out = extractProviderMessage(long);
+    expect(out).toHaveLength(160);
+    expect(out?.endsWith('…')).toBe(true);
+  });
+});
