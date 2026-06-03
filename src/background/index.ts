@@ -47,7 +47,12 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
   void (async () => {
     const parsed = requestSchema.safeParse(message);
     if (!parsed.success) {
-      const res: Result<never> = { ok: false, error: internal('Malformed request.') };
+      // Include only issue paths/codes — never request values (may contain keys).
+      const detail = parsed.error.issues
+        .slice(0, 3)
+        .map((i) => `${i.path.join('.') || '(root)'}: ${i.code}`)
+        .join('; ');
+      const res: Result<never> = { ok: false, error: internal(`Malformed request — ${detail}`) };
       sendResponse(res);
       return;
     }

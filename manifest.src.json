@@ -1,10 +1,14 @@
 {
   "manifest_version": 3,
   "name": "SignalX",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Multi-source news aggregation with BYOK AI summaries and source comparison.",
   "minimum_chrome_version": "114",
-  "permissions": ["sidePanel", "storage", "tabs"],
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "tabs"
+  ],
   "host_permissions": [
     "https://feeds.bbci.co.uk/*",
     "https://rss.cnn.com/*",
