@@ -16,12 +16,28 @@ const STOPWORDS = new Set([
   'have', 'had', 'will', 'would', 'says', 'said', 'after', 'over', 'new', 'amid',
 ]);
 
+// Ideographic scripts (CJK, Hiragana, Katakana, Hangul) where a 1–2 char token
+// is a meaningful word — the ASCII `length > 2` floor would wrongly drop them.
+const CJK_RE = /[぀-ヿ㐀-鿿가-힯豈-﫿]/u;
+
+/** Keep tokens that carry signal: length > 2, OR any ideographic content. */
+export function keepToken(t: string): boolean {
+  if (STOPWORDS.has(t)) return false;
+  return [...t].length > 2 || CJK_RE.test(t);
+}
+
 export function tokenize(title: string): ReadonlySet<string> {
+  // NFKC + Unicode-aware class so Devanagari/Tamil/Arabic/CJK titles survive;
+  // the old ASCII-only strip collapsed every non-Latin title to an empty set,
+  // making each its own singleton cluster (no cross-source dedup).
+  // \p{M} (combining marks) is required so Indic vowel signs/matras stay
+  // attached to their base letter instead of shattering the word.
   const tokens = title
+    .normalize('NFKC')
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/[^\p{L}\p{N}\p{M}\s]/gu, ' ')
     .split(/\s+/)
-    .filter((t) => t.length > 2 && !STOPWORDS.has(t));
+    .filter(keepToken);
   return new Set(tokens);
 }
 

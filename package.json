@@ -1,6 +1,6 @@
 {
   "name": "signalx",
-  "version": "1.1",
+  "version": "1.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
     "check": "npm run typecheck && npm run lint && npm run test",
     "test": "vitest run",
     "test:watch": "vitest",
-    "zip": "npm run build && rm -f signalx-v1.1.zip && cd dist && zip -r ../signalx-v1.1.zip . -x '.*'"
+    "zip": "npm run build && rm -f signalx-v1.1.zip && cd dist && zip -r ../signalx-v1.2.zip . -x '.*'"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

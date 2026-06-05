@@ -10,7 +10,9 @@ const providerId = z.enum(['anthropic', 'openai', 'gemini', 'openrouter']);
 
 const providerSettings = z.object({
   provider: providerId,
-  apiKey: z.string().min(1),
+  // Empty allowed: the masked settings UI sends no key for model-only updates
+  // and stored-key model listing; handlers resolve the stored key server-side.
+  apiKey: z.string(),
   model: z.string().min(1),
 });
 
@@ -28,6 +30,13 @@ const article = z.object({
   sourceName: z.string(),
   publishedAt: z.string(),
   snippet: z.string().optional(),
+});
+
+const cluster = z.object({
+  id: z.string(),
+  headline: z.string(),
+  articles: z.array(article),
+  newestAt: z.string(),
 });
 
 const summarySections = z.object({
@@ -72,7 +81,7 @@ export const requestSchema: z.ZodType<Request> = z.discriminatedUnion('type', [
   z.object({ type: z.literal('feed/trending'), country }),
   z.object({ type: z.literal('search/query'), query: z.string(), country }),
   z.object({ type: z.literal('summary/get'), clusterId: z.string(), summaryType }),
-  z.object({ type: z.literal('compare/get'), clusterId: z.string() }),
+  z.object({ type: z.literal('compare/get'), clusterId: z.string(), cluster: cluster.optional() }),
   z.object({ type: z.literal('settings/getProvider') }),
   z.object({ type: z.literal('settings/setProvider'), settings: providerSettings }),
   z.object({ type: z.literal('settings/testKey'), settings: providerSettings }),

@@ -70,6 +70,12 @@ export async function getFeed(
   }
 
   const { articles, anyOk } = await aggregate(country, category);
+  if (anyOk && articles.length === 0) {
+    // Sources responded (HTTP 200) but parsing yielded nothing — a likely
+    // parser/format regression, NOT an outage. Log distinctly so it doesn't
+    // hide behind the offline fallback below.
+    log.warn('feed sources responded but parsed zero items', { scope });
+  }
   if (!anyOk || articles.length === 0) {
     if (cached) {
       log.warn('feed network failed; serving stale', { scope });

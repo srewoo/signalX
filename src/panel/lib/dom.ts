@@ -19,6 +19,7 @@ export interface ElAttrs {
   readonly 'aria-label'?: string;
   readonly 'aria-pressed'?: boolean;
   readonly 'aria-selected'?: boolean;
+  readonly 'aria-live'?: 'polite' | 'assertive';
   readonly role?: string;
   readonly tabindex?: number;
   /** Inline style is reserved for genuinely dynamic values (e.g. skeleton width). */
@@ -53,6 +54,7 @@ function applyAttrs(node: HTMLElement, attrs: ElAttrs): void {
   if (attrs['aria-label'] !== undefined) node.setAttribute('aria-label', attrs['aria-label']);
   if (attrs['aria-pressed'] !== undefined) node.setAttribute('aria-pressed', String(attrs['aria-pressed']));
   if (attrs['aria-selected'] !== undefined) node.setAttribute('aria-selected', String(attrs['aria-selected']));
+  if (attrs['aria-live'] !== undefined) node.setAttribute('aria-live', attrs['aria-live']);
   applyFormAttrs(node, attrs);
   if (attrs.onClick) node.addEventListener('click', attrs.onClick as EventListener);
   if (attrs.onInput) node.addEventListener('input', attrs.onInput);

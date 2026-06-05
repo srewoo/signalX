@@ -73,6 +73,18 @@ export interface ProviderSettings {
   readonly model: string;
 }
 
+/**
+ * Provider config exposed to the panel. Deliberately omits the API key — the
+ * decrypted key never crosses the message boundary into the UI/DOM; it stays
+ * resident in the background service worker. `hasKey` lets the settings screen
+ * show "key set/verified" without holding the secret.
+ */
+export interface ProviderPublic {
+  readonly provider: ProviderId;
+  readonly model: string;
+  readonly hasKey: boolean;
+}
+
 export interface Preferences {
   readonly country: CountryCode;
   readonly defaultSummaryType: SummaryType;
@@ -122,7 +134,10 @@ export type Request =
   | { readonly type: 'feed/trending'; readonly country: CountryCode }
   | { readonly type: 'search/query'; readonly query: string; readonly country: CountryCode }
   | { readonly type: 'summary/get'; readonly clusterId: string; readonly summaryType: SummaryType } // cached only
-  | { readonly type: 'compare/get'; readonly clusterId: string }
+  // `cluster` is the panel's currently-displayed cluster, sent so the
+  // background can resolve it even if it has been evicted from the session
+  // index. clusterId remains the source of truth; the payload is a fallback.
+  | { readonly type: 'compare/get'; readonly clusterId: string; readonly cluster?: StoryCluster }
   | { readonly type: 'settings/getProvider' }
   | { readonly type: 'settings/setProvider'; readonly settings: ProviderSettings }
   | { readonly type: 'settings/testKey'; readonly settings: ProviderSettings }
@@ -147,7 +162,7 @@ export interface ResponseMap {
   'search/overview': { overview: string; model: string; estCostUsd: number; cached: boolean };
   'summary/get': Summary | null;
   'compare/get': SourceComparison;
-  'settings/getProvider': ProviderSettings | null;
+  'settings/getProvider': ProviderPublic | null;
   'settings/setProvider': void;
   'settings/testKey': { valid: boolean };
   /** Live model list from the provider's /models API; 'fallback' = static catalog (API unreachable). */
@@ -170,6 +185,12 @@ export interface StreamStart {
   readonly type: 'stream/start';
   readonly clusterId: string;
   readonly summaryType: SummaryType;
+  /**
+   * The panel's currently-displayed cluster, sent so the background can resolve
+   * it even after it has been evicted from the session index. clusterId stays
+   * the source of truth; this payload is only a fallback (and must match it).
+   */
+  readonly cluster?: StoryCluster;
 }
 export type StreamEvent =
   | { readonly type: 'delta'; readonly section: keyof SummarySections; readonly text: string }

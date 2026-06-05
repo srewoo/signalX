@@ -1,6 +1,6 @@
 import type { StreamEvent, StreamStart } from '../shared/contracts';
 import { appError } from './result';
-import { getClusterById } from './feeds/cache';
+import { resolveCluster } from './feeds/cache';
 import { getProvider } from './storage/settings';
 import { generateSummary } from './llm/generate';
 import { log } from './logger';
@@ -29,7 +29,7 @@ async function runStream(
   start: StreamStart,
   signal: AbortSignal,
 ): Promise<void> {
-  const cluster = await getClusterById(start.clusterId);
+  const cluster = await resolveCluster(start.clusterId, start.cluster);
   if (signal.aborted) return;
   if (!cluster) {
     post(port, {
@@ -69,11 +69,19 @@ export function attachStreamPort(port: chrome.runtime.Port): void {
   const controller = new AbortController();
   port.onDisconnect.addListener(() => controller.abort());
 
+  // One stream per port. A second stream/start would run concurrently against
+  // the same AbortController and interleave delta/done/error to the same port
+  // (garbled output + double billing). Ignore re-starts; the panel opens a
+  // fresh port per generation.
+  let started = false;
+
   port.onMessage.addListener((msg: unknown) => {
     if (!isStreamStart(msg)) {
       post(port, { type: 'error', error: appError('INTERNAL', 'Invalid stream request.') });
       return;
     }
+    if (started) return;
+    started = true;
     void runStream(port, msg, controller.signal).catch((e: unknown) => {
       if (controller.signal.aborted) return; // user-initiated; nothing to report
       log.error('stream pipeline crashed', { reason: e instanceof Error ? e.name : 'unknown' });

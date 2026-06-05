@@ -54,13 +54,33 @@ function salvageProse(text: string): string {
   return cleaned.slice(0, 400).trim();
 }
 
+// Cap the clean-prose fallback so a model that ignores the JSON instruction and
+// writes a long essay can't dump a full ~1200-token completion into a field
+// meant for a short paragraph.
+const PROSE_FALLBACK_MAX = 600;
+
+function boundProse(text: string): string {
+  if (text.length <= PROSE_FALLBACK_MAX) return text;
+  const sentences = text.match(/[^.!?]+[.!?]+/g);
+  if (sentences && sentences.length > 0) {
+    let out = '';
+    for (const s of sentences) {
+      if ((out + s).length > PROSE_FALLBACK_MAX) break;
+      out += s;
+    }
+    if (out) return out.trim();
+  }
+  return text.slice(0, PROSE_FALLBACK_MAX).trim();
+}
+
 /**
- * Fallback whatHappened text: clean prose passes through; JSON-looking scaffolding
- * is salvaged into prose so the user never sees raw `{"whatHappened":...}` dumps.
+ * Fallback whatHappened text: clean prose passes through (bounded); JSON-looking
+ * scaffolding is salvaged into prose so the user never sees raw
+ * `{"whatHappened":...}` dumps or an unbounded wall of text.
  */
 function fallbackText(text: string): string {
   if (looksLikeJson(text)) return salvageProse(text);
-  return stripFences(text);
+  return boundProse(stripFences(text));
 }
 
 /**

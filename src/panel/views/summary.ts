@@ -13,7 +13,7 @@ import { skelLine } from '../components/skeletons';
 import { openSaveSheet } from '../components/saveSheet';
 import { SUMMARY_TABS, provider } from '../lib/catalog';
 import { openSummaryStream, send, type StreamController } from '../lib/messaging';
-import { navigate, type AppContext } from '../router';
+import { navigate, navEpoch, onLeave, type AppContext } from '../router';
 import { renderSummarySections } from './summarySections';
 import type { StoryCluster, SummaryType, Summary, SummarySections } from '../../shared/contracts';
 
@@ -32,6 +32,11 @@ export function renderSummary(root: HTMLElement, ctx: AppContext, cluster: Story
   const stopBtn = el('button', { class: 'stop-btn', 'aria-label': 'Stop generating', onClick: () => session.controller?.stop() }, [icon('square', 14), el('span', {}, ['Stop'])]);
   const session: Session = { content, ctx, cluster, stopBtn, type, controller: undefined, partial: {} };
 
+  // Any navigation away (nav rail, error-card → settings, back) must close the
+  // stream port; otherwise the background keeps streaming and billing into a
+  // detached DOM.
+  onLeave(() => session.controller?.stop());
+
   render(root, backbar('Back', () => { session.controller?.stop(); navigate({ view: 'feed' }); }, stopBtn), content);
   void start(session);
 }
@@ -44,7 +49,8 @@ function tabs(s: Session): HTMLElement {
   const items = SUMMARY_TABS.map((t) =>
     el('button', {
       class: t.type === s.type ? 'sum-tab on' : 'sum-tab',
-      'aria-pressed': t.type === s.type,
+      role: 'tab',
+      'aria-selected': t.type === s.type,
       onClick: () => {
         if (t.type === s.type) return;
         s.controller?.stop();
@@ -90,7 +96,10 @@ async function start(s: Session): Promise<void> {
     return;
   }
 
+  const e = navEpoch();
   const cached = await send({ type: 'summary/get', clusterId: s.cluster.id, summaryType: s.type });
+  // Bail if the user navigated away while the cache lookup was in flight.
+  if (navEpoch() !== e) return;
   if (cached.ok && cached.value) {
     s.stopBtn.style.display = 'none';
     renderComplete(s, cached.value);
@@ -104,7 +113,8 @@ async function start(s: Session): Promise<void> {
 function renderStreaming(s: Session): void {
   s.partial = {};
   const cursor = el('span', { class: 'cursor' });
-  const whatHappenedP = el('p', {}, [cursor]);
+  // Announce streamed text to assistive tech as it fills in.
+  const whatHappenedP = el('p', { 'aria-live': 'polite' }, [cursor]);
 
   render(
     s.content,
@@ -121,7 +131,7 @@ function renderStreaming(s: Session): void {
   );
 
   s.controller = openSummaryStream(
-    { type: 'stream/start', clusterId: s.cluster.id, summaryType: s.type },
+    { type: 'stream/start', clusterId: s.cluster.id, summaryType: s.type, cluster: s.cluster },
     {
       onDelta: (section, text) => {
         s.partial[section] = (s.partial[section] ?? '') + text;

@@ -10,9 +10,9 @@ describe('stableHash', () => {
     expect(stableHash('alpha')).not.toBe(stableHash('beta'));
   });
 
-  it('should return a non-empty base36 string padded to at least 7 chars', () => {
+  it('should return a non-empty base36 string padded to at least 13 chars', () => {
     const h = stableHash('x');
-    expect(h.length).toBeGreaterThanOrEqual(7);
+    expect(h.length).toBeGreaterThanOrEqual(13);
     expect(/^[0-9a-z]+$/.test(h)).toBe(true);
   });
 

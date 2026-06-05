@@ -12,7 +12,7 @@ import { pageFooter } from '../components/footer';
 import { COUNTRIES, SUMMARY_LENGTHS, PROVIDERS, MODELS, defaultModel, provider as providerInfo } from '../lib/catalog';
 import { applyTheme } from '../lib/theme';
 import { send } from '../lib/messaging';
-import { navigate, type AppContext } from '../router';
+import { navigate, onLeave, type AppContext } from '../router';
 import type { Preferences, ProviderId, ProviderSettings, SummaryType, CountryCode } from '../../shared/contracts';
 
 type ModelOption = { readonly id: string; readonly label: string };
@@ -22,6 +22,13 @@ interface Draft {
   apiKey: string;
   model: string;
   keyState: 'unknown' | 'testing' | 'valid' | 'invalid';
+  /**
+   * Whether a key is already stored in the background for this provider. The
+   * panel never receives the key itself; with hasKey we can list models /
+   * persist model changes (background supplies the stored key) and show the
+   * "verified" state without holding the secret. Reset to false on provider switch.
+   */
+  hasKey: boolean;
   /** Monotonic token to discard stale listModels responses across provider switches. */
   modelSeq: number;
 }
@@ -31,6 +38,9 @@ export function renderSettings(root: HTMLElement, ctx: AppContext): void {
   const bar = backbar('Back', () => navigate({ view: 'feed' }));
   bar.appendChild(el('div', { class: 'title', style: 'font-size:14px;' }, ['Settings']));
   render(root, bar, content);
+  // Drop the module-level reference to this screen's model field on leave so a
+  // late listModels response can't write into detached nodes (and the nodes GC).
+  onLeave(() => { activeModelField = null; });
   void load(content, ctx);
 }
 
@@ -45,11 +55,12 @@ async function load(content: HTMLElement, ctx: AppContext): Promise<void> {
   }
   const existing = provRes.ok ? provRes.value : null;
   const draft: Draft = existing
-    ? { provider: existing.provider, apiKey: existing.apiKey, model: existing.model, keyState: 'valid', modelSeq: 0 }
-    : { provider: 'anthropic', apiKey: '', model: defaultModel('anthropic'), keyState: 'unknown', modelSeq: 0 };
+    ? { provider: existing.provider, apiKey: '', model: existing.model, keyState: 'valid', hasKey: existing.hasKey, modelSeq: 0 }
+    : { provider: 'anthropic', apiKey: '', model: defaultModel('anthropic'), keyState: 'unknown', hasKey: false, modelSeq: 0 };
   draw(content, ctx, prefsRes.value, draft);
-  // Trigger point (b): a verified provider config exists on load → fetch live models.
-  if (existing && draft.apiKey.length > 0) void refreshModels(draft);
+  // Trigger point (b): a verified provider config exists on load → fetch live
+  // models using the stored key (resolved server-side; panel holds no key).
+  if (existing && existing.hasKey) void refreshModels(draft);
 }
 
 function draw(content: HTMLElement, ctx: AppContext, prefs: Preferences, draft: Draft): void {
@@ -77,6 +88,9 @@ function providerGrid(content: HTMLElement, ctx: AppContext, prefs: Preferences,
         draft.provider = p.id;
         draft.model = defaultModel(p.id);
         draft.keyState = 'unknown';
+        // A different provider needs its own key; the stored one doesn't apply.
+        draft.hasKey = false;
+        draft.apiKey = '';
         // Invalidate any in-flight model fetch for the previous provider.
         draft.modelSeq += 1;
         draw(content, ctx, prefs, draft);
@@ -92,7 +106,9 @@ function keyField(content: HTMLElement, ctx: AppContext, prefs: Preferences, dra
   let status = statusEl(draft);
   const test = el('button', { class: 'act-btn', disabled: !draft.apiKey, onClick: () => void runTest(content, ctx, prefs, draft) }, ['Test key']);
   const input = el('input', {
-    class: 'input', type: 'password', value: draft.apiKey, placeholder: 'Paste your API key', 'aria-label': 'API key',
+    class: 'input', type: 'password', value: draft.apiKey,
+    placeholder: draft.hasKey ? 'Key saved — paste a new key to replace' : 'Paste your API key',
+    'aria-label': 'API key',
     onInput: (e) => {
       draft.apiKey = (e.currentTarget as HTMLInputElement).value;
       draft.keyState = 'unknown';
@@ -127,6 +143,7 @@ async function runTest(content: HTMLElement, ctx: AppContext, prefs: Preferences
   const res = await send({ type: 'settings/testKey', settings });
   if (res.ok && res.value.valid) {
     draft.keyState = 'valid';
+    draft.hasKey = true;
     await send({ type: 'settings/setProvider', settings });
     ctx.hasProvider = true;
     draw(content, ctx, prefs, draft);
@@ -212,7 +229,8 @@ function persistIfVerified(draft: Draft): void {
  */
 async function refreshModels(draft: Draft): Promise<void> {
   const handle = activeModelField;
-  if (!handle || handle.draft !== draft || draft.apiKey.length === 0) return;
+  // Need either a freshly typed key or a stored key (background supplies it).
+  if (!handle || handle.draft !== draft || (draft.apiKey.length === 0 && !draft.hasKey)) return;
 
   const seq = (draft.modelSeq += 1);
   setText(handle.hint, 'Loading available models…');

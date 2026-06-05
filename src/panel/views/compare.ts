@@ -10,7 +10,7 @@ import { errorCard } from '../components/errorCard';
 import { skelLine } from '../components/skeletons';
 import { perspClass } from '../lib/catalog';
 import { send } from '../lib/messaging';
-import { navigate } from '../router';
+import { navigate, navEpoch } from '../router';
 import type { StoryCluster, SourceComparison } from '../../shared/contracts';
 
 export function renderCompare(root: HTMLElement, cluster: StoryCluster): void {
@@ -20,8 +20,10 @@ export function renderCompare(root: HTMLElement, cluster: StoryCluster): void {
 }
 
 async function load(content: HTMLElement, cluster: StoryCluster): Promise<void> {
+  const e = navEpoch();
   render(content, loadingSkeleton());
-  const res = await send({ type: 'compare/get', clusterId: cluster.id });
+  const res = await send({ type: 'compare/get', clusterId: cluster.id, cluster });
+  if (navEpoch() !== e) return; // navigated away while comparing
   if (!res.ok) {
     render(content, errorCard(res.error, { onRetry: () => void load(content, cluster) }));
     return;

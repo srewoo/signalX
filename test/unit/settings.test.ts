@@ -79,3 +79,38 @@ describe('getProvider / setProvider', () => {
     expect(fake.storage.local.store.has('__signalx_provider_v1')).toBe(false);
   });
 });
+
+describe('getProviderPublic', () => {
+  it('should return provider + model + hasKey WITHOUT the api key', async () => {
+    const { setProvider, getProviderPublic } = await load();
+    await setProvider({ provider: 'openai', apiKey: 'sk-secret', model: 'gpt-4o-mini' });
+    const pub = await getProviderPublic();
+    expect(pub).toEqual({ provider: 'openai', model: 'gpt-4o-mini', hasKey: true });
+    expect(JSON.stringify(pub)).not.toContain('sk-secret');
+  });
+
+  it('should return null when nothing is stored', async () => {
+    const { getProviderPublic } = await load();
+    expect(await getProviderPublic()).toBeNull();
+  });
+});
+
+describe('setProvider key preservation (masked UI)', () => {
+  it('should keep the stored key when apiKey is empty and provider is unchanged', async () => {
+    const { setProvider, getProvider } = await load();
+    await setProvider({ provider: 'openai', apiKey: 'sk-keep', model: 'gpt-4o-mini' });
+    // Model-only update from the masked UI (no key sent).
+    await setProvider({ provider: 'openai', apiKey: '', model: 'gpt-4o' });
+    const got = await getProvider();
+    expect(got).toEqual({ provider: 'openai', apiKey: 'sk-keep', model: 'gpt-4o' });
+  });
+
+  it('should be a no-op when apiKey is empty and no key is stored for that provider', async () => {
+    const { setProvider, getProvider } = await load();
+    await setProvider({ provider: 'openai', apiKey: 'sk-openai', model: 'm' });
+    // Different provider, empty key — nothing to preserve, must not persist.
+    await setProvider({ provider: 'anthropic', apiKey: '', model: 'claude' });
+    const got = await getProvider();
+    expect(got?.provider).toBe('openai'); // unchanged
+  });
+});

@@ -13,17 +13,21 @@ interface Price {
   readonly outPerM: number;
 }
 
+// Defaults are the mid-tier model for each provider, NOT the cheapest: an
+// unknown model is more likely a new flagship than a budget SKU, so a low
+// default would under-report cost (the old anthropic 0.8/4 under-reported Opus
+// ~15x). Better to slightly over-estimate than mislead.
 const DEFAULTS: Record<ProviderId, Price> = {
-  anthropic: { inPerM: 0.8, outPerM: 4 },
-  openai: { inPerM: 0.5, outPerM: 1.5 },
-  gemini: { inPerM: 0.35, outPerM: 1.05 },
-  openrouter: { inPerM: 0.5, outPerM: 1.5 },
+  anthropic: { inPerM: 3, outPerM: 15 },
+  openai: { inPerM: 1.25, outPerM: 10 },
+  gemini: { inPerM: 2, outPerM: 12 },
+  openrouter: { inPerM: 1.25, outPerM: 10 },
 };
 
 const MODEL_PRICES: Record<string, Price> = {
   'claude-haiku-4-5': { inPerM: 1, outPerM: 5 },
   'claude-sonnet-4-6': { inPerM: 3, outPerM: 15 },
-  'claude-opus-4-8': { inPerM: 15, outPerM: 75 },
+  'claude-opus-4-8': { inPerM: 5, outPerM: 25 },
   'gpt-5-mini': { inPerM: 0.25, outPerM: 2 },
   'gpt-5.1': { inPerM: 1.25, outPerM: 10 },
   'gpt-5-nano': { inPerM: 0.05, outPerM: 0.4 },

@@ -23,12 +23,18 @@ const MAX_TOPICS = 12;
 // (>= BIGRAM_WEIGHT * 2) or equivalent accumulated weight (>= 6) across articles.
 const MIN_SCORE = BIGRAM_WEIGHT * 2;
 
+// Ideographic scripts where a 1–2 char token is a meaningful word.
+const CJK_RE = /[぀-ヿ㐀-鿿가-힯豈-﫿]/u;
+
 function words(title: string): readonly string[] {
+  // Unicode-aware (NFKC + \p{L}\p{N}) so non-Latin titles contribute to trending
+  // instead of being silently dropped by an ASCII-only strip.
   return title
+    .normalize('NFKC')
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/[^\p{L}\p{N}\p{M}\s]/gu, ' ')
     .split(/\s+/)
-    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+    .filter((w) => w.length > 0 && !STOPWORDS.has(w) && ([...w].length > 2 || CJK_RE.test(w)));
 }
 
 function titleCase(phrase: string): string {
@@ -47,7 +53,8 @@ export function trendingTopics(articles: readonly Article[], now = Date.now()): 
 
   for (const a of articles) {
     const ts = Date.parse(a.publishedAt);
-    if (!Number.isNaN(ts) && now - ts > WINDOW_MS) continue;
+    // Skip undateable items rather than counting them as in-window forever.
+    if (Number.isNaN(ts) || now - ts > WINDOW_MS) continue;
     const ws = words(a.title);
     for (const w of ws) add(w, UNIGRAM_WEIGHT);
     for (let i = 0; i < ws.length - 1; i++) {

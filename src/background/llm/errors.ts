@@ -125,6 +125,25 @@ export function backoffMs(attempt: number, retryAfterSec?: number): number {
   return exp + jitter;
 }
 
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+/**
+ * Sleep `ms`, resolving early if `signal` aborts. Clears the timer on abort so a
+ * panel close during a long Retry-After wait doesn't leave a timer alive in the
+ * service worker.
+ */
+export function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }

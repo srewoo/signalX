@@ -65,9 +65,14 @@ describe('buildSummaryPrompt', () => {
     expect(user).toContain('keyFacts');
   });
 
-  it('should state the word budget in the user prompt when given short or detailed', () => {
-    expect(buildSummaryPrompt(cluster, 'short').user).toContain('100 words');
-    expect(buildSummaryPrompt(cluster, 'detailed').user).toContain('300 words');
+  it('should give clearly distinct, more-elaborate guidance for detailed than short', () => {
+    const short = buildSummaryPrompt(cluster, 'short').user;
+    const detailed = buildSummaryPrompt(cluster, 'detailed').user;
+    expect(short).toContain('SHORT');
+    expect(detailed).toContain('DETAILED');
+    expect(detailed).toContain('450 words');
+    // Detailed guidance must be substantially richer than short.
+    expect(detailed.length).toBeGreaterThan(short.length + 200);
   });
 
   it('should include the article snippet when one is present', () => {

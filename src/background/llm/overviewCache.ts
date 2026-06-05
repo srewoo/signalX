@@ -1,4 +1,4 @@
-import { local, readRaw, writeRaw } from '../storage/area';
+import { local, readRaw, withSerializedWrite, writeRaw } from '../storage/area';
 import { z } from 'zod';
 
 /**
@@ -60,15 +60,17 @@ export async function writeOverviewCache(
   overview: string,
   now = Date.now(),
 ): Promise<void> {
-  const map = await readMap();
-  const key = cacheKey(query, model);
-  // Re-insert at the end (delete first) so refreshed entries count as newest.
-  delete map[key];
-  map[key] = { overview, model, at: new Date(now).toISOString() };
-  const keys = Object.keys(map);
-  if (keys.length > MAX_ENTRIES) {
-    // Object key order is insertion order; drop the oldest overflow.
-    for (const k of keys.slice(0, keys.length - MAX_ENTRIES)) delete map[k];
-  }
-  await writeRaw(local(), OVERVIEW_KEY, map);
+  await withSerializedWrite(OVERVIEW_KEY, async () => {
+    const map = await readMap();
+    const key = cacheKey(query, model);
+    // Re-insert at the end (delete first) so refreshed entries count as newest.
+    delete map[key];
+    map[key] = { overview, model, at: new Date(now).toISOString() };
+    const keys = Object.keys(map);
+    if (keys.length > MAX_ENTRIES) {
+      // Object key order is insertion order; drop the oldest overflow.
+      for (const k of keys.slice(0, keys.length - MAX_ENTRIES)) delete map[k];
+    }
+    await writeRaw(local(), OVERVIEW_KEY, map);
+  });
 }

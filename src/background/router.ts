@@ -5,9 +5,9 @@ import { readSummaryCache } from './llm/summaryCache';
 import { generateComparison, generateOverview } from './llm/generate';
 import { testKey } from './llm/client';
 import { listModels } from './llm/models';
-import { getClusterById } from './feeds/cache';
+import { getClusterById, resolveCluster } from './feeds/cache';
 import type { StoryCluster } from '../shared/contracts';
-import { getPrefs, getProvider, setPrefs, setProvider } from './storage/settings';
+import { getPrefs, getProvider, getProviderPublic, setPrefs, setProvider } from './storage/settings';
 import {
   createFolder,
   listFolders,
@@ -29,8 +29,11 @@ async function requireProvider(): Promise<Result<ProviderSettings>> {
   return ok(provider);
 }
 
-async function handleCompare(clusterId: string): Promise<Resp<'compare/get'>> {
-  const cluster = await getClusterById(clusterId);
+async function handleCompare(
+  clusterId: string,
+  fallback?: StoryCluster,
+): Promise<Resp<'compare/get'>> {
+  const cluster = await resolveCluster(clusterId, fallback);
   if (!cluster) return err(appError('INTERNAL', 'That story is no longer available. Refresh the feed.'));
   const provider = await requireProvider();
   if (!provider.ok) return err(provider.error);
@@ -70,21 +73,33 @@ export async function route(req: Request): Promise<Result<unknown>> {
       return search(req.query, req.country);
     case 'summary/get': {
       const provider = await getProvider();
-      const model = provider?.model ?? '';
-      const cached = model ? await readSummaryCache(req.clusterId, req.summaryType, model) : null;
+      const cached = provider
+        ? await readSummaryCache(req.clusterId, req.summaryType, provider.provider, provider.model)
+        : null;
       return ok(cached);
     }
     case 'compare/get':
-      return handleCompare(req.clusterId);
+      return handleCompare(req.clusterId, req.cluster);
     case 'settings/getProvider':
-      return ok(await getProvider());
+      // Public (keyless) shape only — the decrypted key never reaches the panel.
+      return ok(await getProviderPublic());
     case 'settings/setProvider':
       await setProvider(req.settings);
       return ok(undefined);
     case 'settings/testKey':
       return handleTestKey(req);
-    case 'settings/listModels':
-      return listModels(req.settings);
+    case 'settings/listModels': {
+      // The masked UI sends no key; fall back to the stored key for the same
+      // provider so model listing works without exposing the key to the panel.
+      let settings = req.settings;
+      if (!settings.apiKey) {
+        const stored = await getProvider();
+        if (stored && stored.provider === settings.provider) {
+          settings = { ...settings, apiKey: stored.apiKey };
+        }
+      }
+      return listModels(settings);
+    }
     case 'settings/getPrefs':
       return ok(await getPrefs());
     case 'settings/setPrefs':

@@ -1,7 +1,7 @@
-import type { Preferences, ProviderSettings } from '../../shared/contracts';
+import type { Preferences, ProviderPublic, ProviderSettings } from '../../shared/contracts';
 import { DEFAULT_PREFS } from '../../shared/contracts';
 import { log } from '../logger';
-import { local, readRaw, removeKey, writeRaw } from './area';
+import { local, readRaw, removeKey, withSerializedWrite, writeRaw } from './area';
 import { decryptString, encryptString } from './crypto';
 import { preferencesSchema, storedProviderSchema } from './schemas';
 
@@ -28,13 +28,39 @@ export async function getProvider(): Promise<ProviderSettings | null> {
   }
 }
 
-/** Encrypt and persist provider settings. */
+/**
+ * Provider config WITHOUT the key, for the UI. Presence is detected without
+ * decrypting. Returns null if unset or corrupt.
+ */
+export async function getProviderPublic(): Promise<ProviderPublic | null> {
+  const raw = await readRaw(local(), PROVIDER_KEY);
+  if (raw === undefined) return null;
+  const parsed = storedProviderSchema.safeParse(raw);
+  if (!parsed.success) return null;
+  return { provider: parsed.data.provider, model: parsed.data.model, hasKey: true };
+}
+
+/**
+ * Encrypt and persist provider settings. An empty `apiKey` means "keep the
+ * existing stored key" (model/provider-only update from the masked UI) — only
+ * valid when a key is already stored for the SAME provider; otherwise the write
+ * is a no-op (you can't configure a provider with no key). Serialized so a
+ * model-change write can't race a key-change write and lose one.
+ */
 export async function setProvider(settings: ProviderSettings): Promise<void> {
-  const apiKey = await encryptString(settings.apiKey);
-  await writeRaw(local(), PROVIDER_KEY, {
-    provider: settings.provider,
-    apiKey,
-    model: settings.model,
+  await withSerializedWrite(PROVIDER_KEY, async () => {
+    let plain = settings.apiKey;
+    if (!plain) {
+      const existing = await getProvider();
+      if (!existing || existing.provider !== settings.provider) return; // nothing to preserve
+      plain = existing.apiKey;
+    }
+    const apiKey = await encryptString(plain);
+    await writeRaw(local(), PROVIDER_KEY, {
+      provider: settings.provider,
+      apiKey,
+      model: settings.model,
+    });
   });
 }
 

@@ -103,11 +103,23 @@ describe('parseFeed', () => {
   it('should split the Google News " - Publisher" suffix into the source name when present', () => {
     const xml = `<rss><channel><item>
       <title>Economy grows in Q2 - Reuters</title>
-      <link>https://example.com/gn</link>
+      <link>https://news.google.com/rss/articles/CBMiABC?oc=5</link>
     </item></channel></rss>`;
     const out = parseFeed(xml, 'googlenews', 'Google News');
     expect(out[0]!.title).toBe('Economy grows in Q2');
     expect(out[0]!.sourceName).toBe('Reuters');
+  });
+
+  it('should NOT split a " - X" suffix for a direct (non-Google-News) feed', () => {
+    // A real headline can legitimately contain " - X"; only GN-proxied items
+    // carry the publisher-suffix convention.
+    const xml = `<rss><channel><item>
+      <title>India - Pakistan talks resume</title>
+      <link>https://www.bbc.com/news/world-123</link>
+    </item></channel></rss>`;
+    const out = parseFeed(xml, 'bbc', 'BBC');
+    expect(out[0]!.title).toBe('India - Pakistan talks resume');
+    expect(out[0]!.sourceName).toBe('BBC');
   });
 
   it('should NOT split when the trailing dash segment is too long', () => {

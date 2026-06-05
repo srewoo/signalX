@@ -40,9 +40,15 @@ export function storyCard(cluster: StoryCluster, opts: StoryCardOptions): HTMLEl
     el('button', { class: 'summarize-link', 'aria-label': `Summarize: ${cluster.headline}`, onClick: (e) => { e.stopPropagation(); opts.onSummarize(); } }, [icon('sparkles', 14), el('span', {}, ['Summarize'])]),
   ]);
 
-  return el('button', { class: 'card', onClick: opts.onOpen, 'aria-label': cluster.headline }, [
-    meta,
-    el('h3', {}, [cluster.headline]),
-    sourcesRow,
-  ]);
+  // The headline is the real open control (keyboard + AT focusable). The card
+  // wrapper is a plain div with a mouse-convenience click — NOT a button, so we
+  // don't nest interactive elements (invalid HTML, breaks AT). stopPropagation
+  // on the headline avoids a double-open when the click also bubbles to the card.
+  const title = el('button', {
+    class: 'card-open',
+    'aria-label': cluster.headline,
+    onClick: (e) => { e.stopPropagation(); opts.onOpen(); },
+  }, [el('h3', {}, [cluster.headline])]);
+
+  return el('div', { class: 'card', onClick: opts.onOpen }, [meta, title, sourcesRow]);
 }

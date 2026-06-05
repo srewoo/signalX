@@ -5,9 +5,14 @@
  * clustering/dedup recognise it as one article.
  */
 
-const TRACKING_PARAM = /^(utm_\w+|fbclid|gclid|igshid|oc|ocid|cmpid)$/i;
+const TRACKING_PARAM =
+  /^(utm_\w+|fbclid|gclid|dclid|gclsrc|igshid|mc_cid|mc_eid|_ga|ref|ref_src|referrer|source|spm|oc|ocid|cmpid|cid|at_medium|at_campaign|wt\.mc_id|s_kwcid|ns_campaign|ns_mchannel)$/i;
 
-/** Normalize a URL for hashing: https, lowercase host, no fragment/tracking params/trailing slash. */
+/**
+ * Normalize a URL for hashing so the same story from different feeds collapses
+ * to one identity: https, lowercase host, no `www.`/`amp.`/`m.` host prefix, no
+ * fragment, tracking params dropped, query params sorted, no trailing slash.
+ */
 export function canonicalizeUrl(raw: string): string {
   let url: URL;
   try {
@@ -16,13 +21,15 @@ export function canonicalizeUrl(raw: string): string {
     return raw;
   }
   if (url.protocol === 'http:') url.protocol = 'https:';
-  url.hostname = url.hostname.toLowerCase();
+  url.hostname = url.hostname.toLowerCase().replace(/^(www|amp|m|mobile)\./, '');
   url.hash = '';
   const drop: string[] = [];
   url.searchParams.forEach((_v, key) => {
     if (TRACKING_PARAM.test(key)) drop.push(key);
   });
   for (const key of drop) url.searchParams.delete(key);
+  // Sort remaining params so `?a=1&b=2` and `?b=2&a=1` produce one identity.
+  url.searchParams.sort();
   if (url.pathname.length > 1 && url.pathname.endsWith('/')) {
     url.pathname = url.pathname.slice(0, -1);
   }

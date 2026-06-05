@@ -15,7 +15,12 @@ import { skelCards } from '../components/skeletons';
 import { errorCard } from '../components/errorCard';
 import { relativeTime } from '../lib/time';
 import { send } from '../lib/messaging';
+import { navEpoch } from '../router';
 import type { Folder, SavedItem } from '../../shared/contracts';
+
+// Bumped on each root/folder load so an in-flight fetch from a superseded view
+// (e.g. drilling into a folder, then going back) can't render stale results.
+let savedSeq = 0;
 
 export function renderSaved(root: HTMLElement): void {
   const content = el('div', { class: 'content' });
@@ -26,6 +31,8 @@ export function renderSaved(root: HTMLElement): void {
 // ───────────────────────── Root (folders + recent) ─────────────────────────
 
 async function loadRoot(root: HTMLElement, content: HTMLElement): Promise<void> {
+  const token = ++savedSeq;
+  const e = navEpoch();
   render(root, topbar('Saved', 'saved'), content);
   render(content, skelCards(3));
 
@@ -33,6 +40,8 @@ async function loadRoot(root: HTMLElement, content: HTMLElement): Promise<void> 
     send({ type: 'bookmarks/listFolders' }),
     send({ type: 'bookmarks/list' }),
   ]);
+
+  if (token !== savedSeq || navEpoch() !== e) return;
 
   if (!foldersRes.ok) {
     render(content, errorCard(foldersRes.error, { onRetry: () => void loadRoot(root, content) }));
@@ -125,12 +134,15 @@ function recentSection(items: readonly SavedItem[]): HTMLElement {
 // ───────────────────────── Folder drill-down ─────────────────────────
 
 async function loadFolder(root: HTMLElement, content: HTMLElement, folder: Folder): Promise<void> {
+  const token = ++savedSeq;
+  const e = navEpoch();
   const bar = backbar('Saved', () => void loadRoot(root, content));
   bar.appendChild(el('div', { class: 'title', style: 'font-size:14px;' }, [folder.name]));
   render(root, bar, content);
   render(content, skelCards(3));
 
   const res = await send({ type: 'bookmarks/list', folderId: folder.id });
+  if (token !== savedSeq || navEpoch() !== e) return;
   if (!res.ok) {
     render(content, errorCard(res.error, { onRetry: () => void loadFolder(root, content, folder) }));
     return;

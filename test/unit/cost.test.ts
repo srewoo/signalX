@@ -26,8 +26,9 @@ describe('estCostUsd', () => {
   it('should fall back to provider defaults when the model is unknown', () => {
     const prompt = 'a'.repeat(4000);
     const cost = estCostUsd('anthropic', 'some-future-model', prompt, '');
-    // default anthropic in 0.8/M, 1000 tokens => 0.0008
-    expect(cost).toBeCloseTo(0.0008, 6);
+    // default anthropic in 3/M (mid-tier, so unknown flagships aren't under-reported),
+    // 1000 tokens => 0.003
+    expect(cost).toBeCloseTo(0.003, 6);
   });
 
   it('should produce a higher cost for output than input given equal lengths and out>in pricing', () => {

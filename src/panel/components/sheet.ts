@@ -6,6 +6,7 @@
 
 import { el } from '../lib/dom';
 import { icon, type IconName } from '../lib/icons';
+import { onLeave } from '../router';
 
 export interface SheetHandle {
   readonly close: () => void;
@@ -27,11 +28,17 @@ export function openSheet(title: string, body: readonly HTMLElement[]): SheetHan
 
   const scrim = el('div', { class: 'sheet-scrim' }, [sheet]);
 
+  let closed = false;
   const close = (): void => {
+    if (closed) return; // idempotent: may be called by Escape/scrim AND onLeave
+    closed = true;
     document.removeEventListener('keydown', onKey, true);
     scrim.remove();
     if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
   };
+  // Navigating away while a sheet is open must tear it down; otherwise the
+  // capture-phase document keydown listener (and the detached focus ref) leak.
+  onLeave(close);
 
   const onKey = (e: KeyboardEvent): void => {
     if (e.key === 'Escape') {

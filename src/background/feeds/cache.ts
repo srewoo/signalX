@@ -81,10 +81,23 @@ async function applyIndexWrite(clusters: readonly StoryCluster[]): Promise<void>
   const raw = await readRaw(session(), CLUSTER_INDEX_KEY);
   const map: Record<string, unknown> =
     raw && typeof raw === 'object' ? { ...(raw as Record<string, unknown>) } : {};
-  for (const c of clusters) map[c.id] = c;
+  // True MRU ordering: every touched cluster must move to the END (most
+  // recently touched), so the FRONT is always the least-recently-touched and
+  // safe to evict. JS keeps an existing key's original position on re-assign,
+  // so delete-then-set is required to actually move it. `clusters` arrives
+  // newest-first; iterate oldest-first so the newest story is touched LAST and
+  // therefore sits furthest from the eviction front — currently-displayed
+  // headlines (re-touched on every feed load) never get evicted before stale
+  // ones.
+  for (let i = clusters.length - 1; i >= 0; i--) {
+    const c = clusters[i];
+    if (!c) continue;
+    delete map[c.id];
+    map[c.id] = c;
+  }
   const keys = Object.keys(map);
   if (keys.length > MAX_INDEXED_CLUSTERS) {
-    // Drop oldest-inserted overflow (object key order is insertion order).
+    // Drop least-recently-touched overflow from the front (insertion order).
     for (const k of keys.slice(0, keys.length - MAX_INDEXED_CLUSTERS)) delete map[k];
   }
   await writeRaw(session(), CLUSTER_INDEX_KEY, map);
@@ -108,4 +121,27 @@ export async function getClusterById(id: string): Promise<StoryCluster | null> {
   if (entry === undefined) return null;
   const parsed = clusterSchema.safeParse(entry);
   return parsed.success ? (parsed.data as StoryCluster) : null;
+}
+
+/**
+ * Resolve a cluster by id, falling back to a panel-supplied payload when the
+ * index has dropped it (eviction, SW restart, feed rotation). The fallback is
+ * trusted only if it parses AND its id matches the requested id — so a stale
+ * panel can always summarize/compare what it is currently showing without a
+ * spurious "story no longer available". An adopted cluster is re-indexed so
+ * sibling calls (summary cache, feedback, compare) resolve it too.
+ */
+export async function resolveCluster(
+  id: string,
+  fallback?: StoryCluster,
+): Promise<StoryCluster | null> {
+  const found = await getClusterById(id);
+  if (found) return found;
+  if (fallback === undefined) return null;
+  const parsed = clusterSchema.safeParse(fallback);
+  if (!parsed.success) return null;
+  const cluster = parsed.data as StoryCluster;
+  if (cluster.id !== id) return null;
+  await indexClusters([cluster]);
+  return cluster;
 }
