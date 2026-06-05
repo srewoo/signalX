@@ -45,6 +45,40 @@ type Renderer = (route: Route) => void;
 let current: Route = { view: 'feed' };
 let renderer: Renderer | null = null;
 
+// Cleanups registered by the active view/components, run when we leave the
+// current route. Without this the router replaces #app's children with no
+// unmount hook, leaking whatever the previous view left running — most
+// importantly an open streaming port (which keeps billing the user's API key),
+// plus document-level listeners, debounce timers, and detached-node refs.
+let cleanups: Array<() => void> = [];
+
+// Bumped on every navigation. Async loaders capture the epoch before an await
+// and bail if it changed, so a slow fetch can't render into a detached
+// container after the user has navigated away.
+let epoch = 0;
+
+/** Register a cleanup to run on the next navigation away from the current route. */
+export function onLeave(fn: () => void): void {
+  cleanups.push(fn);
+}
+
+/** Monotonic navigation counter; see epoch comment above. */
+export function navEpoch(): number {
+  return epoch;
+}
+
+function runCleanups(): void {
+  const fns = cleanups;
+  cleanups = [];
+  for (const fn of fns) {
+    try {
+      fn();
+    } catch {
+      /* a faulty cleanup must not block navigation */
+    }
+  }
+}
+
 export function initRouter(initial: Route, onRender: Renderer): void {
   current = initial;
   renderer = onRender;
@@ -52,6 +86,8 @@ export function initRouter(initial: Route, onRender: Renderer): void {
 }
 
 export function navigate(route: Route): void {
+  runCleanups();
+  epoch += 1;
   current = route;
   renderer?.(route);
 }

@@ -67,7 +67,8 @@ export async function streamWithRetry(
 
     const budget = retryBudget(res.error);
     if (attempt >= budget) return err(res.error);
-    await delay(backoffMs(attempt, res.error.retryAfterSec));
+    await delay(backoffMs(attempt, res.error.retryAfterSec), external);
+    if (external?.aborted) return err(res.error); // cancelled during backoff
     attempt++;
   }
 }

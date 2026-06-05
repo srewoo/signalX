@@ -26,7 +26,13 @@ export interface ProviderClient {
 const ok = (text: string): Result<StreamSuccess> => ({ ok: true, value: { text } });
 const fail = (error: AppError): Result<StreamSuccess> => ({ ok: false, error });
 
-/** Read an SSE stream line-by-line, invoking onEvent for each `data:` payload. */
+/**
+ * Read an SSE stream and invoke onEvent once per event with the concatenated
+ * `data:` payload. Per the SSE spec, an event may span multiple `data:` lines
+ * and is terminated by a blank line — accumulate until the boundary rather than
+ * dispatching each line, so a provider that splits a payload doesn't break.
+ * Handles CRLF, comment lines (`:`), and a trailing event with no final blank.
+ */
 export async function readSse(
   res: Response,
   onEvent: (data: string) => void,
@@ -36,6 +42,13 @@ export async function readSse(
   if (!reader) return;
   const decoder = new TextDecoder();
   let buffer = '';
+  let dataLines: string[] = [];
+  const flush = (): void => {
+    if (dataLines.length > 0) {
+      onEvent(dataLines.join('\n'));
+      dataLines = [];
+    }
+  };
   try {
     for (;;) {
       if (signal.aborted) throw new DOMException('aborted', 'AbortError');
@@ -44,12 +57,24 @@ export async function readSse(
       buffer += decoder.decode(value, { stream: true });
       let nl: number;
       while ((nl = buffer.indexOf('\n')) !== -1) {
-        const line = buffer.slice(0, nl).trim();
+        const line = buffer.slice(0, nl).replace(/\r$/, '');
         buffer = buffer.slice(nl + 1);
-        if (line.startsWith('data:')) onEvent(line.slice(5).trim());
+        if (line === '') {
+          flush(); // blank line = event boundary
+        } else if (line.startsWith('data:')) {
+          dataLines.push(line.slice(5).replace(/^ /, '')); // strip one lead space per spec
+        }
+        // `:` comments and other fields (event:/id:/retry:) are ignored.
       }
     }
+    // A final data line with no terminating newline stays in the buffer.
+    const tail = buffer.replace(/\r$/, '');
+    if (tail.startsWith('data:')) dataLines.push(tail.slice(5).replace(/^ /, ''));
+    flush(); // a final event not followed by a blank line
   } finally {
+    // releaseLock alone leaves the body buffering; cancel tears down the stream
+    // on user abort so we stop reading (and the connection can close).
+    if (signal.aborted) await reader.cancel().catch(() => undefined);
     reader.releaseLock();
   }
 }

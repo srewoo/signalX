@@ -100,16 +100,22 @@ export function parseFeed(
     const rawDesc = tagContent(block, 'description') ?? tagContent(block, 'summary');
     // Google News links are redirects; swap in the real publisher URL when the
     // description anchor exposes one (best-effort — see canonical.ts).
-    if (isGoogleNewsRedirect(url)) {
+    const viaGoogleNews = isGoogleNewsRedirect(url);
+    if (viaGoogleNews) {
       const real = unwrapGoogleNewsLink(rawDesc);
       if (real) url = real;
     }
 
+    // The trailing " - Publisher" convention is a Google News artifact. Only
+    // peel it for GN-proxied items; otherwise a real headline like
+    // "India - Pakistan talks resume" would be mis-split into title/source.
     let displayName = sourceName;
-    const dashIdx = title.lastIndexOf(' - ');
-    if (dashIdx > 0 && title.length - dashIdx < 60) {
-      displayName = title.slice(dashIdx + 3).trim() || sourceName;
-      title = title.slice(0, dashIdx).trim();
+    if (viaGoogleNews) {
+      const dashIdx = title.lastIndexOf(' - ');
+      if (dashIdx > 0 && title.length - dashIdx < 60) {
+        displayName = title.slice(dashIdx + 3).trim() || sourceName;
+        title = title.slice(0, dashIdx).trim();
+      }
     }
 
     const publishedAt =

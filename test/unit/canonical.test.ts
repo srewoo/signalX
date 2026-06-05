@@ -10,6 +10,25 @@ describe('canonicalizeUrl', () => {
     expect(canonicalizeUrl('http://example.com/story')).toBe('https://example.com/story');
   });
 
+  it('should strip www./amp./m. host prefixes so they collapse to one identity', () => {
+    const apex = canonicalizeUrl('https://bbc.com/news/x');
+    expect(canonicalizeUrl('https://www.bbc.com/news/x')).toBe(apex);
+    expect(canonicalizeUrl('https://amp.bbc.com/news/x')).toBe(apex);
+    expect(canonicalizeUrl('https://m.bbc.com/news/x')).toBe(apex);
+  });
+
+  it('should produce one identity regardless of query-param order', () => {
+    expect(canonicalizeUrl('https://example.com/a?b=2&a=1')).toBe(
+      canonicalizeUrl('https://example.com/a?a=1&b=2'),
+    );
+  });
+
+  it('should drop expanded tracking params (mc_cid, ref, spm, _ga)', () => {
+    expect(canonicalizeUrl('https://example.com/a?mc_cid=1&ref=tw&spm=x&_ga=2&id=9')).toBe(
+      'https://example.com/a?id=9',
+    );
+  });
+
   it('should strip utm_* and click-id tracking params when present', () => {
     expect(
       canonicalizeUrl('https://example.com/a?utm_source=x&utm_medium=y&fbclid=z&gclid=g&id=7'),

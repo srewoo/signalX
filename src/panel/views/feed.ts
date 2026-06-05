@@ -14,8 +14,13 @@ import { openSheet, optRow } from '../components/sheet';
 import { COUNTRIES, CATEGORIES, country } from '../lib/catalog';
 import { relativeTime } from '../lib/time';
 import { send } from '../lib/messaging';
-import { navigate, type AppContext } from '../router';
+import { navigate, navEpoch, type AppContext } from '../router';
 import type { CountryCode, StoryCluster } from '../../shared/contracts';
+
+// Bumped on every feed (re)load. A category/country switch re-enters load()
+// without a navigation, so two loads can be in flight at once; the stale one
+// must not render. navEpoch additionally guards navigation away from the feed.
+let feedSeq = 0;
 
 export function renderFeed(root: HTMLElement, ctx: AppContext): void {
   const content = el('div', { class: 'content' });
@@ -84,12 +89,17 @@ async function selectCountry(ctx: AppContext, code: CountryCode, content: HTMLEl
 }
 
 async function load(content: HTMLElement, ctx: AppContext): Promise<void> {
+  const token = ++feedSeq;
+  const e = navEpoch();
   render(content, trendingSection([]), skelCards(3));
 
   const [feedRes, trendingRes] = await Promise.all([
     send({ type: 'feed/get', country: ctx.country, category: ctx.category }),
     send({ type: 'feed/trending', country: ctx.country }),
   ]);
+
+  // A newer load (category/country switch) or a navigation superseded this one.
+  if (token !== feedSeq || navEpoch() !== e) return;
 
   const topics = trendingRes.ok ? trendingRes.value.topics : [];
 

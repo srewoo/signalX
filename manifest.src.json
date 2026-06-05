@@ -9,6 +9,9 @@
     "storage",
     "tabs"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'none'; frame-ancestors 'none'"
+  },
   "host_permissions": [
     "https://feeds.bbci.co.uk/*",
     "https://rss.cnn.com/*",

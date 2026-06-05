@@ -17,7 +17,7 @@ import { storyCard } from '../components/storyCard';
 import { skelCards, skelLine } from '../components/skeletons';
 import { errorCard } from '../components/errorCard';
 import { send } from '../lib/messaging';
-import { navigate, type AppContext } from '../router';
+import { navigate, onLeave, type AppContext } from '../router';
 import type { StoryCluster, AppError } from '../../shared/contracts';
 
 const DEBOUNCE_MS = 300;
@@ -25,6 +25,12 @@ const DEBOUNCE_MS = 300;
 export function renderSearch(root: HTMLElement, ctx: AppContext, initialQuery = ''): void {
   const content = el('div', { class: 'content' });
   let timer: ReturnType<typeof setTimeout> | undefined;
+  // On navigation away, cancel a pending debounced search (and invalidate any
+  // in-flight overview token) so it can't fire against a detached container.
+  onLeave(() => {
+    if (timer) clearTimeout(timer);
+    seq.value += 1;
+  });
   // Monotonic token: each run() bumps it; pending overview work tied to an old
   // token is discarded so a stale response can never overwrite fresh results.
   const seq = { value: 0 };

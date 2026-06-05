@@ -69,6 +69,9 @@ export function openSummaryStream(start: StreamStart, handlers: StreamHandlers):
   port.onMessage.addListener((msg: unknown) => {
     const event = msg as StreamEvent;
     if (event.type === 'delta') {
+      // Drop deltas that arrive after done/error: the complete view has already
+      // replaced the streaming nodes, so a late delta would mutate a detached one.
+      if (settled) return;
       handlers.onDelta(event.section, event.text);
     } else if (event.type === 'done') {
       settled = true;

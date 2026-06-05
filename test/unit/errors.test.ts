@@ -155,3 +155,24 @@ describe('extractProviderMessage', () => {
     expect(out?.endsWith('…')).toBe(true);
   });
 });
+
+describe('delay (abortable)', () => {
+  it('should resolve immediately when the signal is already aborted', async () => {
+    const { delay } = await import('../../src/background/llm/errors');
+    const ac = new AbortController();
+    ac.abort();
+    const start = Date.now();
+    await delay(10_000, ac.signal); // would hang 10s if not abort-aware
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
+
+  it('should resolve early when aborted mid-wait', async () => {
+    const { delay } = await import('../../src/background/llm/errors');
+    const ac = new AbortController();
+    const p = delay(10_000, ac.signal);
+    ac.abort();
+    const start = Date.now();
+    await p;
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
+});

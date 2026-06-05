@@ -20,7 +20,13 @@ import { buildComparePrompt, buildOverviewPrompt, buildSummaryPrompt } from './p
 import { readOverviewCache, writeOverviewCache } from './overviewCache';
 import { readSummaryCache, writeSummaryCache } from './summaryCache';
 
-const SUMMARY_MAX_TOKENS = 1200;
+// Detailed needs real headroom (~300–450 words across sections) so it isn't
+// truncated mid-JSON; short/keyfacts stay tight.
+const SUMMARY_MAX_TOKENS: Record<SummaryType, number> = {
+  short: 700,
+  detailed: 1800,
+  keyfacts: 1000,
+};
 const COMPARE_MAX_TOKENS = 1400;
 const OVERVIEW_MAX_TOKENS = 300;
 
@@ -38,7 +44,7 @@ export async function generateSummary(
   onWhatHappened: WhatHappenedListener,
   signal?: AbortSignal,
 ): Promise<Result<Summary>> {
-  const cached = await readSummaryCache(cluster.id, type, settings.model);
+  const cached = await readSummaryCache(cluster.id, type, settings.provider, settings.model);
   if (cached) {
     onWhatHappened(cached.sections.whatHappened);
     return ok(cached);
@@ -52,7 +58,7 @@ export async function generateSummary(
     settings,
     system,
     user,
-    SUMMARY_MAX_TOKENS,
+    SUMMARY_MAX_TOKENS[type],
     (chunk) => {
       raw += chunk;
       const wh = progressiveWhatHappened(raw);
@@ -84,7 +90,7 @@ export async function generateSummary(
     cached: false,
     generatedAt: new Date().toISOString(),
   };
-  await writeSummaryCache(summary);
+  await writeSummaryCache(summary, settings.provider);
   return ok(summary);
 }
 

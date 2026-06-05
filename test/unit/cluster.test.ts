@@ -142,4 +142,27 @@ describe('clusterArticles', () => {
     ]);
     expect(out).toHaveLength(1);
   });
+
+  it('should retain Devanagari tokens (not collapse to an empty set)', () => {
+    // The old ASCII-only strip wiped these; tokenization must keep them so
+    // non-Latin stories can cluster.
+    const t = tokenize('महाराष्ट्र विधान परिषद चुनाव');
+    expect(t.size).toBeGreaterThan(0);
+    expect(t.has('चुनाव')).toBe(true);
+  });
+
+  it('should keep ideographic 1-2 char tokens (CJK words)', () => {
+    const t = tokenize('東京 経済');
+    expect(t.has('東京')).toBe(true);
+    expect(t.has('経済')).toBe(true);
+  });
+
+  it('should cluster two sources covering the same Devanagari story', () => {
+    const out = clusterArticles([
+      article({ id: '1', title: 'महाराष्ट्र विधान परिषद चुनाव परिणाम घोषित', sourceId: 'a' }),
+      article({ id: '2', title: 'महाराष्ट्र विधान परिषद चुनाव परिणाम आज', sourceId: 'b' }),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0]!.articles).toHaveLength(2);
+  });
 });
